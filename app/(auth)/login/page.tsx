@@ -10,9 +10,12 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { authApi } from "@/lib/api/auth"
+import { useToast } from "@/hooks/use-toast"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { toast } = useToast()
   const [loading, setLoading] = React.useState(false)
   const [error, setError] = React.useState("")
 
@@ -26,11 +29,26 @@ export default function LoginPage() {
     setLoading(true)
     setError("")
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const result = await authApi.login({
+        email: emailLogin.email,
+        password: emailLogin.password,
+      })
+
+      if (result.success && result.token) {
+        toast({
+          title: "Login successful",
+          description: "Welcome back to ArogyaRx!",
+        })
+        router.push("/")
+      } else {
+        setError(result.message || "Invalid credentials")
+      }
+    } catch (err: any) {
+      setError(err.message || "Login failed. Please try again.")
+    } finally {
       setLoading(false)
-      router.push("/")
-    }, 1500)
+    }
   }
 
   const handlePhoneLogin = async (e: React.FormEvent) => {
@@ -42,6 +60,10 @@ export default function LoginPage() {
       setTimeout(() => {
         setOtpSent(true)
         setLoading(false)
+        toast({
+          title: "OTP Sent",
+          description: "Please check your phone for the verification code.",
+        })
       }, 1000)
     } else {
       setLoading(true)

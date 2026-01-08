@@ -1,5 +1,26 @@
 import { API_BASE_URL, getAuthHeaders, handleApiError } from "../api-config"
 
+export interface Address {
+  _id: string
+  type: "home" | "work" | "other"
+  label: string
+  fullName: string
+  phoneNumber: string
+  street: string
+  landmark?: string
+  city: string
+  state: string
+  postalCode: string
+  country: string
+  isDefault: boolean
+  coordinates?: {
+    latitude: number
+    longitude: number
+  }
+  deliveryInstructions?: string
+  createdAt: string
+}
+
 export const profileApi = {
   get: async () => {
     try {
@@ -116,6 +137,37 @@ export const profileApi = {
   getDefaultAddress: async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/profile/addresses/default`, {
+        headers: getAuthHeaders(),
+      })
+      return await response.json()
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
+  uploadProfileImage: async (imageFile: File) => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null
+      const formData = new FormData()
+      formData.append("profileImage", imageFile)
+
+      const response = await fetch(`${API_BASE_URL}/profile/image`, {
+        method: "PUT",
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: formData,
+      })
+      return await response.json()
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
+  deleteProfileImage: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/profile/image`, {
+        method: "DELETE",
         headers: getAuthHeaders(),
       })
       return await response.json()

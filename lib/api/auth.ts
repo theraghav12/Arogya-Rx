@@ -42,12 +42,13 @@ export const authApi = {
       })
       const result = await response.json()
 
-      if (response.ok) {
+      if (response.ok && result.token) {
         localStorage.setItem("authToken", result.token)
         localStorage.setItem("user", JSON.stringify(result.user))
+        return { success: true, ...result }
       }
 
-      return result
+      return { success: false, ...result }
     } catch (error) {
       return handleApiError(error)
     }
@@ -62,12 +63,13 @@ export const authApi = {
       })
       const result = await response.json()
 
-      if (response.ok) {
+      if (response.ok && result.token) {
         localStorage.setItem("authToken", result.token)
         localStorage.setItem("user", JSON.stringify(result.user))
+        return { success: true, ...result }
       }
 
-      return result
+      return { success: false, ...result }
     } catch (error) {
       return handleApiError(error)
     }

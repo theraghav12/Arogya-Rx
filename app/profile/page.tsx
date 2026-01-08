@@ -1,6 +1,10 @@
 "use client"
+
+import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
+import { isAuthenticated } from "@/lib/auth-utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -9,56 +13,315 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Mail, Phone, Calendar, Package, ChevronRight, Stethoscope, MapPin, TruckIcon } from "lucide-react"
-import Link from "next/link"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Mail,
+  Phone,
+  Calendar,
+  MapPin,
+  Upload,
+  Trash2,
+  Plus,
+  Home,
+  Briefcase,
+} from "lucide-react"
 import { format } from "date-fns"
+import { profileApi, type Address } from "@/lib/api/profile"
+import { useToast } from "@/hooks/use-toast"
 
 export default function ProfilePage() {
-  const recentOrders = [
-    {
-      id: "ORD123456",
-      date: new Date("2025-01-20"),
-      status: "delivered",
-      items: 3,
-      total: 609,
-    },
-    {
-      id: "ORD123455",
-      date: new Date("2025-01-15"),
-      status: "processing",
-      items: 2,
-      total: 950,
-    },
-  ]
+  const { toast } = useToast()
+  const router = useRouter()
+  const [loading, setLoading] = React.useState(true)
+  const [updating, setUpdating] = React.useState(false)
+  const [profile, setProfile] = React.useState<any>(null)
+  const [addresses, setAddresses] = React.useState<Address[]>([])
+  const [showAddressForm, setShowAddressForm] = React.useState(false)
 
-  const upcomingAppointments = [
-    {
-      id: "APT001",
-      doctorName: "Dr. Priya Sharma",
-      specialization: "General Physician",
-      date: new Date("2025-01-28"),
-      time: "3:00 PM",
-      type: "online",
-    },
-    {
-      id: "APT002",
-      doctorName: "Dr. Rajesh Kumar",
-      specialization: "Cardiologist",
-      date: new Date("2025-01-30"),
-      time: "10:00 AM",
-      type: "offline",
-    },
-  ]
+  // Check authentication on mount
+  React.useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push("/login")
+    }
+  }, [router])
 
-  const trackingOrders = [
-    {
-      id: "ORD123455",
-      status: "Out for Delivery",
-      trackingId: "TRK9876543211",
-      estimatedDelivery: new Date("2025-01-26"),
-      currentLocation: "Mumbai Hub",
-    },
-  ]
+  const [profileForm, setProfileForm] = React.useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    contact: "",
+    gender: "",
+    dob: "",
+    street: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "India",
+  })
+
+  const [addressForm, setAddressForm] = React.useState({
+    type: "home" as "home" | "work" | "other",
+    label: "",
+    fullName: "",
+    phoneNumber: "",
+    street: "",
+    landmark: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "India",
+    isDefault: false,
+    deliveryInstructions: "",
+  })
+
+  React.useEffect(() => {
+    loadProfile()
+    loadAddresses()
+  }, [])
+
+  const loadProfile = async () => {
+    try {
+      const data = await profileApi.get()
+      setProfile(data)
+      setProfileForm({
+        firstName: data.firstName || "",
+        lastName: data.lastName || "",
+        email: data.email || "",
+        contact: data.contact || "",
+        gender: data.gender || "",
+        dob: data.dob || "",
+        street: data.address?.street || "",
+        city: data.address?.city || "",
+        state: data.address?.state || "",
+        postalCode: data.address?.postalCode || "",
+        country: data.address?.country || "India",
+      })
+    } catch (error) {
+      console.error("Failed to load profile:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load profile data",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadAddresses = async () => {
+    try {
+      const data = await profileApi.getAddresses()
+      if (data.success && data.addresses) {
+        setAddresses(data.addresses)
+      }
+    } catch (error) {
+      console.error("Failed to load addresses:", error)
+    }
+  }
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setUpdating(true)
+
+    try {
+      const result = await profileApi.update({
+        firstName: profileForm.firstName,
+        lastName: profileForm.lastName,
+        email: profileForm.email,
+        contact: profileForm.contact,
+        gender: profileForm.gender,
+        dob: profileForm.dob,
+        address: {
+          street: profileForm.street,
+          city: profileForm.city,
+          state: profileForm.state,
+          postalCode: profileForm.postalCode,
+          country: profileForm.country,
+        },
+      })
+
+      if (result.message) {
+        toast({
+          title: "Success",
+          description: "Profile updated successfully",
+        })
+        loadProfile()
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update profile",
+        variant: "destructive",
+      })
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "Image size should not exceed 5MB",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Error",
+        description: "Only JPG, PNG, and WebP images are allowed",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const result = await profileApi.uploadProfileImage(file)
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Profile image updated successfully",
+        })
+        loadProfile()
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload image",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteImage = async () => {
+    if (!confirm("Are you sure you want to delete your profile image?")) return
+
+    try {
+      const result = await profileApi.deleteProfileImage()
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Profile image deleted successfully",
+        })
+        loadProfile()
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete image",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleAddAddress = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setUpdating(true)
+
+    try {
+      const result = await profileApi.addAddress(addressForm)
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Address added successfully",
+        })
+        setShowAddressForm(false)
+        setAddressForm({
+          type: "home",
+          label: "",
+          fullName: "",
+          phoneNumber: "",
+          street: "",
+          landmark: "",
+          city: "",
+          state: "",
+          postalCode: "",
+          country: "India",
+          isDefault: false,
+          deliveryInstructions: "",
+        })
+        loadAddresses()
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add address",
+        variant: "destructive",
+      })
+    } finally {
+      setUpdating(false)
+    }
+  }
+
+  const handleDeleteAddress = async (addressId: string) => {
+    if (!confirm("Are you sure you want to delete this address?")) return
+
+    try {
+      const result = await profileApi.deleteAddress(addressId)
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Address deleted successfully",
+        })
+        loadAddresses()
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete address",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleSetDefaultAddress = async (addressId: string) => {
+    try {
+      const result = await profileApi.setDefaultAddress(addressId)
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Default address updated",
+        })
+        loadAddresses()
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to set default address",
+        variant: "destructive",
+      })
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading profile...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2)
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -71,60 +334,91 @@ export default function ProfilePage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-4">
-            {/* Profile Sidebar */}
             <Card className="lg:col-span-1">
               <CardContent className="p-6">
                 <div className="flex flex-col items-center text-center">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src="/placeholder.svg" />
-                    <AvatarFallback>JD</AvatarFallback>
-                  </Avatar>
-                  <h2 className="mt-4 text-xl font-bold">John Doe</h2>
-                  <p className="text-sm text-muted-foreground">john.doe@example.com</p>
+                  <div className="relative">
+                    <Avatar className="h-24 w-24">
+                      <AvatarImage src={profile?.profileImage || "/placeholder-user.jpg"} />
+                      <AvatarFallback>{getInitials(profile?.name || "User")}</AvatarFallback>
+                    </Avatar>
+                    <label
+                      htmlFor="profile-image"
+                      className="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      <Upload className="h-4 w-4" />
+                      <input
+                        id="profile-image"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="hidden"
+                        onChange={handleImageUpload}
+                      />
+                    </label>
+                  </div>
+                  <h2 className="mt-4 text-xl font-bold">{profile?.name || "User"}</h2>
+                  <p className="text-sm text-muted-foreground">{profile?.email}</p>
                   <Badge className="mt-3">Verified Account</Badge>
+
+                  {profile?.profileImage && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-3"
+                      onClick={handleDeleteImage}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remove Photo
+                    </Button>
+                  )}
                 </div>
 
                 <Separator className="my-6" />
 
                 <div className="space-y-3 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Phone className="h-4 w-4" />
-                    <span>+91 98765 43210</span>
-                  </div>
+                  {profile?.contact && (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Phone className="h-4 w-4" />
+                      <span>{profile.contact}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="h-4 w-4" />
-                    <span>Member since Jan 2024</span>
+                    <span>Member since {profile?.createdAt ? format(new Date(profile.createdAt), "MMM yyyy") : "N/A"}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Profile Content */}
             <div className="lg:col-span-3">
               <Tabs defaultValue="personal" className="w-full">
-                <TabsList className="grid w-full grid-cols-7">
-                  <TabsTrigger value="personal">Personal</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="personal">Personal Info</TabsTrigger>
                   <TabsTrigger value="addresses">Addresses</TabsTrigger>
-                  <TabsTrigger value="orders">Orders</TabsTrigger>
-                  <TabsTrigger value="appointments">Appointments</TabsTrigger>
-                  <TabsTrigger value="tracking">Tracking</TabsTrigger>
                   <TabsTrigger value="security">Security</TabsTrigger>
-                  <TabsTrigger value="preferences">Preferences</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="personal" className="mt-6">
                   <Card>
                     <CardContent className="p-6">
                       <h3 className="mb-6 text-lg font-semibold">Personal Information</h3>
-                      <form className="space-y-4">
+                      <form onSubmit={handleUpdateProfile} className="space-y-4">
                         <div className="grid gap-4 sm:grid-cols-2">
                           <div className="space-y-2">
                             <Label htmlFor="firstName">First Name</Label>
-                            <Input id="firstName" defaultValue="John" />
+                            <Input
+                              id="firstName"
+                              value={profileForm.firstName}
+                              onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
+                            />
                           </div>
                           <div className="space-y-2">
                             <Label htmlFor="lastName">Last Name</Label>
-                            <Input id="lastName" defaultValue="Doe" />
+                            <Input
+                              id="lastName"
+                              value={profileForm.lastName}
+                              onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
+                            />
                           </div>
                         </div>
 
@@ -132,36 +426,115 @@ export default function ProfilePage() {
                           <Label htmlFor="email">Email</Label>
                           <div className="relative">
                             <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input id="email" type="email" className="pl-9" defaultValue="john.doe@example.com" />
+                            <Input
+                              id="email"
+                              type="email"
+                              className="pl-9"
+                              value={profileForm.email}
+                              onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                            />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="phone">Phone Number</Label>
+                          <Label htmlFor="contact">Phone Number</Label>
                           <div className="relative">
                             <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input id="phone" type="tel" className="pl-9" defaultValue="+91 98765 43210" />
+                            <Input
+                              id="contact"
+                              type="tel"
+                              className="pl-9"
+                              value={profileForm.contact}
+                              onChange={(e) => setProfileForm({ ...profileForm, contact: e.target.value })}
+                            />
                           </div>
                         </div>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="dob">Date of Birth</Label>
-                          <Input id="dob" type="date" />
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="dob">Date of Birth</Label>
+                            <Input
+                              id="dob"
+                              type="date"
+                              value={profileForm.dob}
+                              onChange={(e) => setProfileForm({ ...profileForm, dob: e.target.value })}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="gender">Gender</Label>
+                            <select
+                              id="gender"
+                              className="w-full rounded-md border px-3 py-2"
+                              value={profileForm.gender}
+                              onChange={(e) => setProfileForm({ ...profileForm, gender: e.target.value })}
+                            >
+                              <option value="">Select Gender</option>
+                              <option value="Male">Male</option>
+                              <option value="Female">Female</option>
+                              <option value="Other">Other</option>
+                            </select>
+                          </div>
                         </div>
 
+                        <Separator className="my-6" />
+
+                        <h4 className="text-sm font-medium">Address</h4>
+
                         <div className="space-y-2">
-                          <Label htmlFor="gender">Gender</Label>
-                          <select id="gender" className="w-full rounded-md border px-3 py-2">
-                            <option>Select Gender</option>
-                            <option>Male</option>
-                            <option>Female</option>
-                            <option>Other</option>
-                          </select>
+                          <Label htmlFor="street">Street Address</Label>
+                          <Input
+                            id="street"
+                            value={profileForm.street}
+                            onChange={(e) => setProfileForm({ ...profileForm, street: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="city">City</Label>
+                            <Input
+                              id="city"
+                              value={profileForm.city}
+                              onChange={(e) => setProfileForm({ ...profileForm, city: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="state">State</Label>
+                            <Input
+                              id="state"
+                              value={profileForm.state}
+                              onChange={(e) => setProfileForm({ ...profileForm, state: e.target.value })}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="postalCode">Postal Code</Label>
+                            <Input
+                              id="postalCode"
+                              value={profileForm.postalCode}
+                              onChange={(e) => setProfileForm({ ...profileForm, postalCode: e.target.value })}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="country">Country</Label>
+                            <Input
+                              id="country"
+                              value={profileForm.country}
+                              onChange={(e) => setProfileForm({ ...profileForm, country: e.target.value })}
+                            />
+                          </div>
                         </div>
 
                         <div className="flex gap-3 pt-4">
-                          <Button>Save Changes</Button>
-                          <Button variant="outline">Cancel</Button>
+                          <Button type="submit" disabled={updating}>
+                            {updating ? "Saving..." : "Save Changes"}
+                          </Button>
+                          <Button type="button" variant="outline" onClick={loadProfile}>
+                            Cancel
+                          </Button>
                         </div>
                       </form>
                     </CardContent>
@@ -172,223 +545,219 @@ export default function ProfilePage() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h3 className="text-lg font-semibold">Saved Addresses</h3>
-                      <Button>Add New Address</Button>
-                    </div>
-
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="space-y-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <div className="mb-2 flex items-center gap-2">
-                                <Badge>Home</Badge>
-                                <Badge variant="secondary">Default</Badge>
-                              </div>
-                              <p className="font-medium">John Doe</p>
-                              <p className="text-sm text-muted-foreground">
-                                123 Main Street, Andheri West
-                                <br />
-                                Mumbai, Maharashtra 400058
-                              </p>
-                              <p className="mt-2 text-sm text-muted-foreground">+91 98765 43210</p>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm">
-                                Edit
-                              </Button>
-                              <Button variant="outline" size="sm">
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="space-y-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <Badge className="mb-2">Work</Badge>
-                              <p className="font-medium">John Doe</p>
-                              <p className="text-sm text-muted-foreground">
-                                456 Business Park, BKC
-                                <br />
-                                Mumbai, Maharashtra 400051
-                              </p>
-                              <p className="mt-2 text-sm text-muted-foreground">+91 98765 43210</p>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm">
-                                Edit
-                              </Button>
-                              <Button variant="outline" size="sm">
-                                Delete
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="orders" className="mt-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">Recent Orders</h3>
-                      <Button variant="outline" asChild>
-                        <Link href="/orders">View All Orders</Link>
+                      <Button onClick={() => setShowAddressForm(!showAddressForm)}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add New Address
                       </Button>
                     </div>
 
-                    {recentOrders.map((order) => (
-                      <Card key={order.id} className="transition-shadow hover:shadow-lg">
+                    {showAddressForm && (
+                      <Card>
                         <CardContent className="p-6">
-                          <div className="flex items-start justify-between">
-                            <div className="flex gap-4">
-                              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                                <Package className="h-6 w-6 text-primary" />
+                          <h4 className="mb-4 font-semibold">Add New Address</h4>
+                          <form onSubmit={handleAddAddress} className="space-y-4">
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div className="space-y-2">
+                                <Label htmlFor="addressType">Type</Label>
+                                <select
+                                  id="addressType"
+                                  className="w-full rounded-md border px-3 py-2"
+                                  value={addressForm.type}
+                                  onChange={(e) =>
+                                    setAddressForm({ ...addressForm, type: e.target.value as "home" | "work" | "other" })
+                                  }
+                                >
+                                  <option value="home">Home</option>
+                                  <option value="work">Work</option>
+                                  <option value="other">Other</option>
+                                </select>
                               </div>
-                              <div>
-                                <div className="mb-1 flex items-center gap-2">
-                                  <h4 className="font-semibold">Order #{order.id}</h4>
-                                  <Badge
-                                    className={
-                                      order.status === "delivered"
-                                        ? "bg-primary"
-                                        : order.status === "processing"
-                                          ? "bg-chart-3"
-                                          : ""
-                                    }
-                                  >
-                                    {order.status.toUpperCase()}
-                                  </Badge>
-                                </div>
-                                <p className="text-sm text-muted-foreground">
-                                  {format(order.date, "PPP")} • {order.items} items
-                                </p>
-                                <p className="mt-2 font-bold">₹{order.total}</p>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="addressLabel">Label *</Label>
+                                <Input
+                                  id="addressLabel"
+                                  placeholder="e.g., Home, Office"
+                                  value={addressForm.label}
+                                  onChange={(e) => setAddressForm({ ...addressForm, label: e.target.value })}
+                                  required
+                                />
                               </div>
                             </div>
-                            <Button variant="outline" size="sm" asChild>
-                              <Link href={`/orders/${order.id}`}>
-                                View Details
-                                <ChevronRight className="ml-1 h-4 w-4" />
-                              </Link>
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </TabsContent>
 
-                <TabsContent value="appointments" className="mt-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold">Upcoming Appointments</h3>
-                      <Button variant="outline" asChild>
-                        <Link href="/appointments">View All Appointments</Link>
-                      </Button>
-                    </div>
-
-                    {upcomingAppointments.map((appointment) => (
-                      <Card key={appointment.id} className="transition-shadow hover:shadow-lg">
-                        <CardContent className="p-6">
-                          <div className="flex items-start justify-between">
-                            <div className="flex gap-4">
-                              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-accent/10">
-                                <Stethoscope className="h-6 w-6 text-accent" />
+                            <div className="grid gap-4 sm:grid-cols-2">
+                              <div className="space-y-2">
+                                <Label htmlFor="fullName">Full Name</Label>
+                                <Input
+                                  id="fullName"
+                                  value={addressForm.fullName}
+                                  onChange={(e) => setAddressForm({ ...addressForm, fullName: e.target.value })}
+                                />
                               </div>
-                              <div>
-                                <h4 className="mb-1 font-semibold">{appointment.doctorName}</h4>
-                                <p className="text-sm text-muted-foreground">{appointment.specialization}</p>
-                                <div className="mt-2 flex items-center gap-3 text-sm">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                                    <span>{format(appointment.date, "PPP")}</span>
-                                  </div>
-                                  <span>•</span>
-                                  <span>{appointment.time}</span>
-                                </div>
-                                <Badge variant="secondary" className="mt-2">
-                                  {appointment.type === "online" ? "Online" : "In-Clinic"}
-                                </Badge>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="phoneNumber">Phone Number</Label>
+                                <Input
+                                  id="phoneNumber"
+                                  type="tel"
+                                  value={addressForm.phoneNumber}
+                                  onChange={(e) => setAddressForm({ ...addressForm, phoneNumber: e.target.value })}
+                                />
                               </div>
                             </div>
-                            <Button variant="outline" size="sm" asChild>
-                              <Link href={`/appointments/${appointment.id}`}>
-                                View Details
-                                <ChevronRight className="ml-1 h-4 w-4" />
-                              </Link>
-                            </Button>
-                          </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="addressStreet">Street Address *</Label>
+                              <Input
+                                id="addressStreet"
+                                value={addressForm.street}
+                                onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
+                                required
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="landmark">Landmark</Label>
+                              <Input
+                                id="landmark"
+                                placeholder="Near City Mall"
+                                value={addressForm.landmark}
+                                onChange={(e) => setAddressForm({ ...addressForm, landmark: e.target.value })}
+                              />
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-3">
+                              <div className="space-y-2">
+                                <Label htmlFor="addressCity">City *</Label>
+                                <Input
+                                  id="addressCity"
+                                  value={addressForm.city}
+                                  onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+                                  required
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="addressState">State *</Label>
+                                <Input
+                                  id="addressState"
+                                  value={addressForm.state}
+                                  onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
+                                  required
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label htmlFor="addressPostalCode">Postal Code *</Label>
+                                <Input
+                                  id="addressPostalCode"
+                                  value={addressForm.postalCode}
+                                  onChange={(e) => setAddressForm({ ...addressForm, postalCode: e.target.value })}
+                                  required
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="deliveryInstructions">Delivery Instructions</Label>
+                              <Input
+                                id="deliveryInstructions"
+                                placeholder="Ring the bell twice"
+                                value={addressForm.deliveryInstructions}
+                                onChange={(e) => setAddressForm({ ...addressForm, deliveryInstructions: e.target.value })}
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                id="isDefault"
+                                checked={addressForm.isDefault}
+                                onChange={(e) => setAddressForm({ ...addressForm, isDefault: e.target.checked })}
+                                className="h-4 w-4"
+                              />
+                              <Label htmlFor="isDefault" className="font-normal">
+                                Set as default address
+                              </Label>
+                            </div>
+
+                            <div className="flex gap-3">
+                              <Button type="submit" disabled={updating}>
+                                {updating ? "Adding..." : "Add Address"}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setShowAddressForm(false)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </form>
                         </CardContent>
                       </Card>
-                    ))}
-                  </div>
-                </TabsContent>
+                    )}
 
-                <TabsContent value="tracking" className="mt-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Track Your Orders</h3>
-
-                    {trackingOrders.length > 0 ? (
-                      trackingOrders.map((order) => (
-                        <Card key={order.id} className="transition-shadow hover:shadow-lg">
+                    {addresses.length === 0 ? (
+                      <Card>
+                        <CardContent className="p-12 text-center">
+                          <MapPin className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                          <h3 className="mb-2 text-lg font-semibold">No Addresses</h3>
+                          <p className="text-sm text-muted-foreground">Add your first delivery address</p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      addresses.map((address) => (
+                        <Card key={address._id}>
                           <CardContent className="p-6">
-                            <div className="space-y-4">
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <div className="mb-1 flex items-center gap-2">
-                                    <h4 className="font-semibold">Order #{order.id}</h4>
-                                    <Badge className="bg-accent">{order.status}</Badge>
-                                  </div>
-                                  <p className="text-sm text-muted-foreground">Tracking ID: {order.trackingId}</p>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="mb-2 flex items-center gap-2">
+                                  {address.type === "home" && <Home className="h-4 w-4" />}
+                                  {address.type === "work" && <Briefcase className="h-4 w-4" />}
+                                  <Badge>{address.label}</Badge>
+                                  {address.isDefault && <Badge variant="secondary">Default</Badge>}
                                 </div>
-                                <Button variant="outline" size="sm" asChild>
-                                  <Link href={`/orders/${order.id}`}>View Order</Link>
-                                </Button>
+                                <p className="font-medium">{address.fullName || profile?.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {address.street}
+                                  {address.landmark && `, ${address.landmark}`}
+                                  <br />
+                                  {address.city}, {address.state} {address.postalCode}
+                                  <br />
+                                  {address.country}
+                                </p>
+                                <p className="mt-2 text-sm text-muted-foreground">
+                                  {address.phoneNumber || profile?.contact}
+                                </p>
+                                {address.deliveryInstructions && (
+                                  <p className="mt-2 text-sm italic text-muted-foreground">
+                                    Note: {address.deliveryInstructions}
+                                  </p>
+                                )}
                               </div>
-
-                              <Separator />
-
-                              <div className="space-y-3">
-                                <div className="flex items-center gap-3">
-                                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                                    <TruckIcon className="h-4 w-4" />
-                                  </div>
-                                  <div className="flex-1">
-                                    <p className="font-medium">{order.status}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                      Current location: {order.currentLocation}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <div className="rounded-lg bg-muted p-4">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">Estimated Delivery</span>
-                                    <span className="font-medium">{format(order.estimatedDelivery, "PPP")}</span>
-                                  </div>
-                                </div>
+                              <div className="flex gap-2">
+                                {!address.isDefault && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleSetDefaultAddress(address._id)}
+                                  >
+                                    Set Default
+                                  </Button>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDeleteAddress(address._id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
                               </div>
                             </div>
                           </CardContent>
                         </Card>
                       ))
-                    ) : (
-                      <Card>
-                        <CardContent className="p-12 text-center">
-                          <MapPin className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                          <h3 className="mb-2 text-lg font-semibold">No Active Shipments</h3>
-                          <p className="text-sm text-muted-foreground">
-                            You don't have any orders in transit at the moment
-                          </p>
-                        </CardContent>
-                      </Card>
                     )}
                   </div>
                 </TabsContent>
@@ -400,21 +769,11 @@ export default function ProfilePage() {
                       <div className="space-y-6">
                         <div>
                           <h4 className="mb-3 font-medium">Change Password</h4>
-                          <form className="space-y-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="currentPassword">Current Password</Label>
-                              <Input id="currentPassword" type="password" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="newPassword">New Password</Label>
-                              <Input id="newPassword" type="password" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                              <Input id="confirmPassword" type="password" />
-                            </div>
-                            <Button>Update Password</Button>
-                          </form>
+                          <Alert>
+                            <AlertDescription>
+                              Password change functionality will be available soon. Contact support if you need to reset your password.
+                            </AlertDescription>
+                          </Alert>
                         </div>
 
                         <Separator />
@@ -424,59 +783,9 @@ export default function ProfilePage() {
                           <p className="mb-4 text-sm text-muted-foreground">
                             Add an extra layer of security to your account
                           </p>
-                          <Button variant="outline">Enable 2FA</Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="preferences" className="mt-6">
-                  <Card>
-                    <CardContent className="p-6">
-                      <h3 className="mb-6 text-lg font-semibold">Preferences</h3>
-                      <div className="space-y-6">
-                        <div>
-                          <h4 className="mb-3 font-medium">Notifications</h4>
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium">Order Updates</p>
-                                <p className="text-sm text-muted-foreground">Get notified about order status changes</p>
-                              </div>
-                              <input type="checkbox" defaultChecked className="h-4 w-4" />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium">Promotional Emails</p>
-                                <p className="text-sm text-muted-foreground">Receive offers and discounts</p>
-                              </div>
-                              <input type="checkbox" defaultChecked className="h-4 w-4" />
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="font-medium">SMS Notifications</p>
-                                <p className="text-sm text-muted-foreground">Get SMS updates for orders</p>
-                              </div>
-                              <input type="checkbox" className="h-4 w-4" />
-                            </div>
-                          </div>
-                        </div>
-
-                        <Separator />
-
-                        <div>
-                          <h4 className="mb-3 font-medium">Language & Region</h4>
-                          <div className="space-y-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="language">Language</Label>
-                              <select id="language" className="w-full rounded-md border px-3 py-2">
-                                <option>English</option>
-                                <option>Hindi</option>
-                                <option>Marathi</option>
-                              </select>
-                            </div>
-                          </div>
+                          <Button variant="outline" disabled>
+                            Enable 2FA (Coming Soon)
+                          </Button>
                         </div>
                       </div>
                     </CardContent>

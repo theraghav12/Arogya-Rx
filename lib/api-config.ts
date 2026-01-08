@@ -1,4 +1,4 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://your-domain.com/api"
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL
 
 export const getAuthHeaders = () => {
   const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null
