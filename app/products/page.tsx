@@ -28,6 +28,7 @@ import { categoriesApi, categoryProductsApi, type CategoryProduct, type Category
 import { useToast } from "@/hooks/use-toast"
 import { isAuthenticated } from "@/lib/auth-utils"
 import { useRouter } from "next/navigation"
+import { BannerCarousel } from "@/components/banner-carousel"
 import { format } from "date-fns"
 
 export default function ProductsPage() {
@@ -408,6 +409,11 @@ export default function ProductsPage() {
 
   return (
     <div className="container px-4 py-8 md:px-6">
+          {/* Banner Carousel */}
+          <div className="mb-6">
+            <BannerCarousel page="category-products" />
+          </div>
+
           {/* Header */}
           <div className="mb-6">
             <div className="flex items-center gap-3 mb-2">

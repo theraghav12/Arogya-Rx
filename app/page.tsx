@@ -8,6 +8,7 @@ import { PopularMedicines } from "@/components/home/popular-medicines"
 import { LabTestsSection } from "@/components/home/lab-tests-section"
 import { DoctorsSection } from "@/components/home/doctors-section"
 import { FeaturesSection } from "@/components/home/features-section"
+import { BannerCarousel } from "@/components/banner-carousel"
 import { isAuthenticated } from "@/lib/auth-utils"
 
 export default function HomePage() {
@@ -36,6 +37,7 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
+      <BannerCarousel />
       <CategoryCards />
       <PopularMedicines />
       <LabTestsSection />

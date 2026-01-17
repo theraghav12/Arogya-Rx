@@ -239,7 +239,7 @@ export async function placeOrder(data: PlaceOrderRequest): Promise<PlaceOrderRes
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(`${API_BASE_URL}/orders/place-order`, {
+  const response = await fetch(`${API_BASE_URL}/orders/place-from-cart`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,

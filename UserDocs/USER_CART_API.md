@@ -432,7 +432,7 @@ console.log(`Total: ₹${cartData.totalPrice}`);
 
 ## 3. Update Item Quantity
 
-**Endpoint:** `PUT /api/cart/update`
+**Endpoint:** `PUT /api/cart/update-quantity`
 
 **Description:** Update the quantity of an item in the cart.
 
@@ -545,7 +545,7 @@ const updateCartQuantity = async (itemData) => {
   try {
     const token = localStorage.getItem('userToken');
     
-    const response = await fetch('http://localhost:5000/api/cart/update', {
+    const response = await fetch('http://localhost:5000/api/cart/update-quantity', {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -569,7 +569,7 @@ await updateCartQuantity({ medicineId: '64med123abc', quantity: 3 });
 
 ## 4. Remove Item from Cart
 
-**Endpoint:** `DELETE /api/cart/remove`
+**Endpoint:** `POST /api/cart/remove`
 
 **Description:** Remove a specific item from the cart.
 
@@ -649,7 +649,7 @@ const removeFromCart = async (itemData) => {
     const token = localStorage.getItem('userToken');
     
     const response = await fetch('http://localhost:5000/api/cart/remove', {
-      method: 'DELETE',
+      method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -770,7 +770,7 @@ const cartResponse = await fetch('http://localhost:5000/api/cart', {
 const cartData = await cartResponse.json();
 
 // 3. Update quantity
-await fetch('http://localhost:5000/api/cart/update', {
+await fetch('http://localhost:5000/api/cart/update-quantity', {
   method: 'PUT',
   headers: {
     'Authorization': `Bearer ${token}`,
@@ -784,7 +784,7 @@ await fetch('http://localhost:5000/api/cart/update', {
 
 // 4. Remove item
 await fetch('http://localhost:5000/api/cart/remove', {
-  method: 'DELETE',
+  method: 'POST',
   headers: {
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'
@@ -808,8 +808,8 @@ await fetch('http://localhost:5000/api/cart/clear', {
 ### Endpoints:
 - `POST /api/cart/add` - Add item to cart
 - `GET /api/cart` - Get cart with populated details
-- `PUT /api/cart/update` - Update item quantity
-- `DELETE /api/cart/remove` - Remove specific item
+- `PUT /api/cart/update-quantity` - Update item quantity
+- `POST /api/cart/remove` - Remove specific item
 - `DELETE /api/cart/clear` - Clear entire cart
 
 ### Supported Product Types:

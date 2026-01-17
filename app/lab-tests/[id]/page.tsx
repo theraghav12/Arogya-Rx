@@ -382,7 +382,18 @@ export default function LabTestDetailPage() {
 
                   {/* Action Buttons */}
                   <div className="space-y-3">
-                    <Button className="w-full" size="lg" disabled={addingToCart} onClick={handleAddToCart}>
+                    <Button className="w-full" size="lg" onClick={() => router.push(`/lab-tests/book/${test._id}`)}>
+                      <Calendar className="mr-2 h-5 w-5" />
+                      Book Now
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      size="lg"
+                      disabled={addingToCart}
+                      onClick={handleAddToCart}
+                    >
                       {addingToCart ? (
                         <>
                           <Loader2 className="mr-2 h-5 w-5 animate-spin" />

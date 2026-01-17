@@ -206,7 +206,7 @@ export async function updateCartQuantity(data: UpdateCartRequest): Promise<CartR
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(`${API_BASE_URL}/cart/update`, {
+  const response = await fetch(`${API_BASE_URL}/cart/update-quantity`, {
     method: 'PUT',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -241,7 +241,7 @@ export async function removeFromCart(data: RemoveFromCartRequest): Promise<CartR
   }
 
   const response = await fetch(`${API_BASE_URL}/cart/remove`, {
-    method: 'DELETE',
+    method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',

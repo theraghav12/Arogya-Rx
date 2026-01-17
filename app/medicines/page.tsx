@@ -16,6 +16,7 @@ import { medicinesApi, type Medicine } from "@/lib/api/medicines"
 import { useToast } from "@/hooks/use-toast"
 import { isAuthenticated } from "@/lib/auth-utils"
 import { useRouter } from "next/navigation"
+import { BannerCarousel } from "@/components/banner-carousel"
 
 export default function MedicinesPage() {
   const { toast } = useToast()
@@ -295,6 +296,11 @@ export default function MedicinesPage() {
 
   return (
     <div className="container px-4 py-8 md:px-6">
+          {/* Banner Carousel */}
+          <div className="mb-6">
+            <BannerCarousel page="medicines" />
+          </div>
+
           {/* Header */}
           <div className="mb-6">
             <h1 className="text-3xl font-bold">Medicines</h1>
