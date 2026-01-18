@@ -208,12 +208,20 @@ export default function DoctorsPage() {
                 <CardContent className="p-6">
                   <div className="mb-4 flex items-start gap-4">
                     <Avatar className="h-16 w-16">
-                      <AvatarImage src={doctor.profileImage || "/placeholder.svg"} alt={doctor.name} />
-                      <AvatarFallback>
+                      <AvatarImage 
+                        src={doctor.profileImage || undefined} 
+                        alt={doctor.name}
+                        onError={(e) => {
+                          console.log("Doctor image failed to load:", doctor.profileImage)
+                          e.currentTarget.style.display = 'none'
+                        }}
+                      />
+                      <AvatarFallback className="bg-primary/10">
                         {doctor.name
                           .split(" ")
                           .map((n) => n[0])
-                          .join("")}
+                          .join("")
+                          .toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">

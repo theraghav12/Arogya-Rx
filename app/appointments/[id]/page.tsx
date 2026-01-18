@@ -224,21 +224,20 @@ export default function AppointmentDetailPage() {
               <CardContent>
                 <div className="flex gap-4">
                   <Avatar className="h-20 w-20 shrink-0">
-                    {doctor.profileImage ? (
-                      <AvatarImage 
-                        src={doctor.profileImage} 
-                        alt={doctor.name}
-                        onError={(e) => {
-                          console.log("Doctor image failed to load:", doctor.profileImage)
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    ) : null}
+                    <AvatarImage 
+                      src={doctor.profileImage || undefined} 
+                      alt={doctor.name}
+                      onError={(e) => {
+                        console.log("Doctor image failed to load:", doctor.profileImage)
+                        e.currentTarget.style.display = 'none'
+                      }}
+                    />
                     <AvatarFallback className="text-lg bg-primary/10">
                       {doctor.name
                         .split(" ")
                         .map((n) => n[0])
-                        .join("")}
+                        .join("")
+                        .toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
 
@@ -452,7 +451,7 @@ export default function AppointmentDetailPage() {
                 </div>
               </div>
 
-              {appointment.paymentStatus === "pending" && (
+              {appointment.paymentStatus === "pending" && appointment.status !== "cancelled" && (
                 <>
                   <Separator />
                   <Button className="w-full" asChild>

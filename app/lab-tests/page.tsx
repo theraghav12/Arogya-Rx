@@ -23,12 +23,24 @@ import {
   Award,
   ChevronLeft,
   ChevronRight,
+  Plus,
+  Minus,
+  Trash2,
+  User,
 } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import Link from "next/link"
 import { labTestsApi, type LabTest } from "@/lib/api/lab-tests"
 import { useToast } from "@/hooks/use-toast"
-import { isAuthenticated } from "@/lib/auth-utils"
+import { isAuthenticated, getUser } from "@/lib/auth-utils"
 import { useRouter } from "next/navigation"
 import { BannerCarousel } from "@/components/banner-carousel"
 
@@ -54,14 +66,44 @@ export default function LabTestsPage() {
   const [statistics, setStatistics] = React.useState<any>(null)
   const [currentPage, setCurrentPage] = React.useState(1)
   const [addingToCart, setAddingToCart] = React.useState<string | null>(null)
+  const [cartItems, setCartItems] = React.useState<Record<string, number>>({})
+  
+  // Patient details dialog state
+  const [showPatientDialog, setShowPatientDialog] = React.useState(false)
+  const [selectedTest, setSelectedTest] = React.useState<LabTest | null>(null)
+  const [bookingFor, setBookingFor] = React.useState<"self" | "other">("self")
+  const [patientName, setPatientName] = React.useState("")
+  const [patientAge, setPatientAge] = React.useState("")
+  const [patientGender, setPatientGender] = React.useState("")
+  const [patientPhone, setPatientPhone] = React.useState("")
+  const [patientDisease, setPatientDisease] = React.useState("")
+  
+  const user = getUser()
 
   React.useEffect(() => {
     loadCategories()
+    loadCartItems()
   }, [])
 
   React.useEffect(() => {
     loadTests()
   }, [currentPage, sortBy, sortOrder, selectedCategories, filters, searchQuery])
+
+  const loadCartItems = async () => {
+    try {
+      const { getCart } = await import("@/lib/api/cart")
+      const cartData = await getCart()
+      const items: Record<string, number> = {}
+      cartData.cart.items.forEach((item) => {
+        if (item.labTestId) {
+          items[item.labTestId._id] = item.quantity
+        }
+      })
+      setCartItems(items)
+    } catch (error) {
+      // Cart might be empty or user not logged in
+    }
+  }
 
   const loadCategories = async () => {
     try {
@@ -130,7 +172,7 @@ export default function LabTestsPage() {
     setCurrentPage(1)
   }
 
-  const handleAddToCart = async (test: LabTest) => {
+  const openPatientDialog = (test: LabTest) => {
     if (!isAuthenticated()) {
       toast({
         title: "Login Required",
@@ -141,25 +183,127 @@ export default function LabTestsPage() {
       return
     }
 
-    setAddingToCart(test._id)
+    setSelectedTest(test)
+    setBookingFor("self")
+    setPatientName(user?.name || "")
+    setPatientAge("")
+    setPatientGender("")
+    setPatientPhone(user?.contact || "")
+    setPatientDisease("")
+    setShowPatientDialog(true)
+  }
+
+  const handleAddToCart = async () => {
+    if (!selectedTest) return
+
+    // Validation
+    if (!patientName || !patientAge || !patientGender || !patientPhone) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setAddingToCart(selectedTest._id)
     try {
       const { addToCart } = await import("@/lib/api/cart")
       const result = await addToCart({
-        labTestId: test._id,
+        labTestId: selectedTest._id,
         quantity: 1,
-        isHomeCollection: test.isHomeCollectionAvailable,
+        isHomeCollection: selectedTest.isHomeCollectionAvailable,
+        labTestPatientDetails: {
+          name: patientName,
+          phone: patientPhone,
+          gender: patientGender,
+          age: parseInt(patientAge),
+          disease: patientDisease || undefined,
+        },
       })
 
       if (result.message) {
+        setCartItems(prev => ({ ...prev, [selectedTest._id]: 1 }))
         toast({
           title: "Success",
-          description: `${test.testName} added to cart`,
+          description: `${selectedTest.testName} added to cart`,
         })
+        setShowPatientDialog(false)
+        setSelectedTest(null)
       }
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message || "Failed to add to cart",
+        variant: "destructive",
+      })
+    } finally {
+      setAddingToCart(null)
+    }
+  }
+
+  React.useEffect(() => {
+    if (bookingFor === "self" && user) {
+      setPatientName(user.name || "")
+      setPatientPhone(user.contact || "")
+    } else if (bookingFor === "other") {
+      setPatientName("")
+      setPatientPhone("")
+    }
+  }, [bookingFor, user])
+
+  const handleUpdateQuantity = async (testId: string, newQuantity: number) => {
+    if (newQuantity < 1) return
+
+    setAddingToCart(testId)
+    try {
+      // Try the update endpoint first
+      try {
+        const { updateCartQuantity } = await import("@/lib/api/cart")
+        await updateCartQuantity({
+          labTestId: testId,
+          quantity: newQuantity,
+        })
+        setCartItems(prev => ({ ...prev, [testId]: newQuantity }))
+      } catch (updateError: any) {
+        // If update fails, use remove and re-add approach
+        console.log('Update failed, using fallback method:', updateError.message)
+        const { removeFromCart, addToCart } = await import("@/lib/api/cart")
+        await removeFromCart({ labTestId: testId })
+        await addToCart({ labTestId: testId, quantity: newQuantity })
+        setCartItems(prev => ({ ...prev, [testId]: newQuantity }))
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update quantity",
+        variant: "destructive",
+      })
+      // Reload cart to sync state
+      loadCartItems()
+    } finally {
+      setAddingToCart(null)
+    }
+  }
+
+  const handleRemoveFromCart = async (testId: string) => {
+    setAddingToCart(testId)
+    try {
+      const { removeFromCart } = await import("@/lib/api/cart")
+      await removeFromCart({ labTestId: testId })
+      setCartItems(prev => {
+        const newItems = { ...prev }
+        delete newItems[testId]
+        return newItems
+      })
+      toast({
+        title: "Success",
+        description: "Item removed from cart",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove item",
         variant: "destructive",
       })
     } finally {
@@ -448,24 +592,54 @@ export default function LabTestsPage() {
                         </div>
                       </CardContent>
                       <CardFooter className="p-4 pt-0">
-                        <Button
-                          className="w-full"
-                          size="sm"
-                          disabled={addingToCart === test._id}
-                          onClick={() => handleAddToCart(test)}
-                        >
-                          {addingToCart === test._id ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Adding...
-                            </>
-                          ) : (
-                            <>
-                              <ShoppingCart className="mr-2 h-4 w-4" />
-                              Add to Cart
-                            </>
-                          )}
-                        </Button>
+                        {cartItems[test._id] ? (
+                          <div className="flex items-center gap-1 w-full border rounded-lg overflow-hidden">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-10 w-10 rounded-none hover:bg-primary hover:text-primary-foreground"
+                              disabled={addingToCart === test._id}
+                              onClick={() => {
+                                if (cartItems[test._id] === 1) {
+                                  handleRemoveFromCart(test._id)
+                                } else {
+                                  handleUpdateQuantity(test._id, cartItems[test._id] - 1)
+                                }
+                              }}
+                            >
+                              {cartItems[test._id] === 1 ? (
+                                <Trash2 className="h-4 w-4" />
+                              ) : (
+                                <Minus className="h-4 w-4" />
+                              )}
+                            </Button>
+                            <div className="flex-1 text-center font-semibold text-base bg-muted/50 h-10 flex items-center justify-center">
+                              {addingToCart === test._id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                cartItems[test._id]
+                              )}
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-10 w-10 rounded-none hover:bg-primary hover:text-primary-foreground"
+                              disabled={addingToCart === test._id}
+                              onClick={() => handleUpdateQuantity(test._id, cartItems[test._id] + 1)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            className="w-full"
+                            size="sm"
+                            onClick={() => openPatientDialog(test)}
+                          >
+                            <ShoppingCart className="mr-2 h-4 w-4" />
+                            Add to Cart
+                          </Button>
+                        )}
                       </CardFooter>
                     </Card>
                   ))}
@@ -526,23 +700,53 @@ export default function LabTestsPage() {
                                 )}
                               </div>
 
-                              <Button
-                                size="sm"
-                                disabled={addingToCart === test._id}
-                                onClick={() => handleAddToCart(test)}
-                              >
-                                {addingToCart === test._id ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Adding...
-                                  </>
-                                ) : (
-                                  <>
-                                    <ShoppingCart className="mr-2 h-4 w-4" />
-                                    Add to Cart
-                                  </>
-                                )}
-                              </Button>
+                              {cartItems[test._id] ? (
+                                <div className="flex items-center gap-1 border rounded-lg overflow-hidden">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-none hover:bg-primary hover:text-primary-foreground"
+                                    disabled={addingToCart === test._id}
+                                    onClick={() => {
+                                      if (cartItems[test._id] === 1) {
+                                        handleRemoveFromCart(test._id)
+                                      } else {
+                                        handleUpdateQuantity(test._id, cartItems[test._id] - 1)
+                                      }
+                                    }}
+                                  >
+                                    {cartItems[test._id] === 1 ? (
+                                      <Trash2 className="h-4 w-4" />
+                                    ) : (
+                                      <Minus className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                  <div className="min-w-[50px] text-center font-semibold bg-muted/50 h-9 flex items-center justify-center px-3">
+                                    {addingToCart === test._id ? (
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      cartItems[test._id]
+                                    )}
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 rounded-none hover:bg-primary hover:text-primary-foreground"
+                                    disabled={addingToCart === test._id}
+                                    onClick={() => handleUpdateQuantity(test._id, cartItems[test._id] + 1)}
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  onClick={() => openPatientDialog(test)}
+                                >
+                                  <ShoppingCart className="mr-2 h-4 w-4" />
+                                  Add to Cart
+                                </Button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -601,6 +805,139 @@ export default function LabTestsPage() {
               )}
             </div>
           </div>
+
+          {/* Patient Details Dialog */}
+          <Dialog open={showPatientDialog} onOpenChange={setShowPatientDialog}>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Patient Details</DialogTitle>
+                <DialogDescription>
+                  Please provide patient information for the lab test
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                {/* Booking For */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Who is this test for?</Label>
+                  <RadioGroup value={bookingFor} onValueChange={(value: "self" | "other") => setBookingFor(value)}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="self" id="dialog-self" />
+                      <Label htmlFor="dialog-self" className="cursor-pointer font-normal">Myself</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="other" id="dialog-other" />
+                      <Label htmlFor="dialog-other" className="cursor-pointer font-normal">Someone Else</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <Separator />
+
+                {/* Patient Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="dialog-patient-name">Patient Name *</Label>
+                  <Input
+                    id="dialog-patient-name"
+                    value={patientName}
+                    onChange={(e) => setPatientName(e.target.value)}
+                    placeholder="Enter patient name"
+                    required
+                  />
+                </div>
+
+                {/* Age and Gender */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="dialog-patient-age">Age *</Label>
+                    <Input
+                      id="dialog-patient-age"
+                      type="number"
+                      value={patientAge}
+                      onChange={(e) => setPatientAge(e.target.value)}
+                      placeholder="Age"
+                      required
+                      min="1"
+                      max="120"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="dialog-patient-gender">Gender *</Label>
+                    <Select value={patientGender} onValueChange={setPatientGender} required>
+                      <SelectTrigger id="dialog-patient-gender">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-2">
+                  <Label htmlFor="dialog-patient-phone">Phone Number *</Label>
+                  <Input
+                    id="dialog-patient-phone"
+                    type="tel"
+                    value={patientPhone}
+                    onChange={(e) => setPatientPhone(e.target.value)}
+                    placeholder="Enter phone number"
+                    required
+                  />
+                </div>
+
+                {/* Disease (Optional) */}
+                <div className="space-y-2">
+                  <Label htmlFor="dialog-patient-disease">Disease/Condition (Optional)</Label>
+                  <Input
+                    id="dialog-patient-disease"
+                    value={patientDisease}
+                    onChange={(e) => setPatientDisease(e.target.value)}
+                    placeholder="e.g., Diabetes, Hypertension"
+                  />
+                </div>
+
+                {/* Test Info */}
+                {selectedTest && (
+                  <div className="rounded-lg bg-muted p-3 space-y-1">
+                    <p className="text-sm font-medium">{selectedTest.testName}</p>
+                    <p className="text-sm text-muted-foreground">₹{selectedTest.discountedPrice}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowPatientDialog(false)
+                    setSelectedTest(null)
+                  }}
+                  disabled={addingToCart !== null}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleAddToCart}
+                  disabled={addingToCart !== null}
+                >
+                  {addingToCart ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    "Add to Cart"
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
   )
 }

@@ -5,7 +5,9 @@ import { useRouter } from 'next/navigation';
 import { MapPin, CreditCard, Package, AlertCircle, Loader2, Upload, FileText, X } from 'lucide-react';
 import { getCart, type CartItem } from '@/lib/api/cart';
 import { placeOrder, checkPrescriptionStatus } from '@/lib/api/orders';
+import { createOrderPayment, initiateRazorpayPayment } from '@/lib/api/payment';
 import { profileApi } from '@/lib/api/profile';
+import { getUser } from '@/lib/auth-utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -205,34 +207,96 @@ export default function CheckoutPage() {
 
     setPlacing(true);
     try {
-      const orderData: any = {
-        cartId,
-        contact,
-        paymentMethod,
-      };
+      let addressString = '';
 
       if (useCustomAddress) {
         // Combine all address fields into single string
-        orderData.address = `${customAddress.houseNumber}, ${customAddress.street}, ${customAddress.city}, ${customAddress.state} - ${customAddress.pincode}`;
+        addressString = `${customAddress.houseNumber}, ${customAddress.street}, ${customAddress.city}, ${customAddress.state} - ${customAddress.pincode}`;
+      } else if (selectedAddressId) {
+        // Find the selected address and format it as a string
+        const selectedAddr = addresses.find(addr => addr._id === selectedAddressId);
+        if (selectedAddr) {
+          addressString = `${selectedAddr.street}, ${selectedAddr.city}, ${selectedAddr.state} ${selectedAddr.pincode}`;
+        } else {
+          toast({
+            title: 'Address Error',
+            description: 'Selected address not found',
+            variant: 'destructive',
+          });
+          setPlacing(false);
+          return;
+        }
       } else {
-        orderData.addressId = selectedAddressId;
+        toast({
+          title: 'Address Required',
+          description: 'Please select or enter a delivery address',
+          variant: 'destructive',
+        });
+        setPlacing(false);
+        return;
       }
 
-      const result = await placeOrder(orderData);
+      // Handle payment based on method
+      if (paymentMethod === 'Online') {
+        // Create Razorpay payment order
+        const paymentData = await createOrderPayment({
+          cartId,
+          address: addressString,
+          contact,
+        });
 
-      toast({
-        title: 'Success',
-        description: 'Order placed successfully!',
-      });
+        const user = getUser();
 
-      router.push(`/orders/${result.order._id}`);
+        // Initiate Razorpay payment
+        await initiateRazorpayPayment(
+          paymentData,
+          {
+            name: user?.name || 'User',
+            email: user?.email || '',
+            contact: contact,
+          },
+          () => {
+            // Payment success
+            toast({
+              title: 'Success',
+              description: 'Payment successful! Order placed.',
+            });
+            router.push(`/orders/${paymentData.orderId}`);
+          },
+          (error) => {
+            // Payment failure
+            toast({
+              title: 'Payment Failed',
+              description: error,
+              variant: 'destructive',
+            });
+            setPlacing(false);
+          }
+        );
+      } else {
+        // COD - Place order directly
+        const orderData: any = {
+          cartId,
+          address: addressString,
+          contact,
+          paymentMethod: 'COD',
+        };
+
+        const result = await placeOrder(orderData);
+
+        toast({
+          title: 'Success',
+          description: 'Order placed successfully!',
+        });
+
+        router.push(`/orders/${result.order._id}`);
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
         description: error.message,
         variant: 'destructive',
       });
-    } finally {
       setPlacing(false);
     }
   };

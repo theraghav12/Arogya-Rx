@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast"
 import { labTestsApi, type LabTest } from "@/lib/api/lab-tests"
 import { createLabTestOrder } from "@/lib/api/orders"
 import { getUser } from "@/lib/auth-utils"
-import { ChevronLeft, Calendar as CalendarIcon, Clock, Home, User, Phone, Mail, MapPin, Loader2 } from "lucide-react"
+import { ChevronLeft, Calendar as CalendarIcon, Home, User, Phone, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { cn } from "@/lib/utils"
 

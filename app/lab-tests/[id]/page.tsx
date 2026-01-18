@@ -28,7 +28,17 @@ import {
 import { labTestsApi, type LabTest } from "@/lib/api/lab-tests"
 import { addToCart } from "@/lib/api/cart"
 import { useToast } from "@/hooks/use-toast"
-import { isAuthenticated } from "@/lib/auth-utils"
+import { isAuthenticated, getUser } from "@/lib/auth-utils"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function LabTestDetailPage() {
   const params = useParams()
@@ -38,6 +48,17 @@ export default function LabTestDetailPage() {
   const [loading, setLoading] = React.useState(true)
   const [addingToCart, setAddingToCart] = React.useState(false)
   const [isHomeCollection, setIsHomeCollection] = React.useState(false)
+  
+  // Patient details dialog state
+  const [showPatientDialog, setShowPatientDialog] = React.useState(false)
+  const [bookingFor, setBookingFor] = React.useState<"self" | "other">("self")
+  const [patientName, setPatientName] = React.useState("")
+  const [patientAge, setPatientAge] = React.useState("")
+  const [patientGender, setPatientGender] = React.useState("")
+  const [patientPhone, setPatientPhone] = React.useState("")
+  const [patientDisease, setPatientDisease] = React.useState("")
+  
+  const user = getUser()
 
   React.useEffect(() => {
     if (params.id) {
@@ -65,9 +86,7 @@ export default function LabTestDetailPage() {
     }
   }
 
-  const handleAddToCart = async () => {
-    if (!test) return
-
+  const openPatientDialog = () => {
     if (!isAuthenticated()) {
       toast({
         title: "Login Required",
@@ -78,12 +97,41 @@ export default function LabTestDetailPage() {
       return
     }
 
+    setBookingFor("self")
+    setPatientName(user?.name || "")
+    setPatientAge("")
+    setPatientGender("")
+    setPatientPhone(user?.contact || "")
+    setPatientDisease("")
+    setShowPatientDialog(true)
+  }
+
+  const handleAddToCart = async () => {
+    if (!test) return
+
+    // Validation
+    if (!patientName || !patientAge || !patientGender || !patientPhone) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill all required fields",
+        variant: "destructive",
+      })
+      return
+    }
+
     setAddingToCart(true)
     try {
       const result = await addToCart({
         labTestId: test._id,
         quantity: 1,
         isHomeCollection,
+        labTestPatientDetails: {
+          name: patientName,
+          phone: patientPhone,
+          gender: patientGender,
+          age: parseInt(patientAge),
+          disease: patientDisease || undefined,
+        },
       })
 
       if (result.message) {
@@ -91,6 +139,7 @@ export default function LabTestDetailPage() {
           title: "Success",
           description: `${test.testName} added to cart`,
         })
+        setShowPatientDialog(false)
       }
     } catch (error: any) {
       toast({
@@ -102,6 +151,16 @@ export default function LabTestDetailPage() {
       setAddingToCart(false)
     }
   }
+
+  React.useEffect(() => {
+    if (bookingFor === "self" && user) {
+      setPatientName(user.name || "")
+      setPatientPhone(user.contact || "")
+    } else if (bookingFor === "other") {
+      setPatientName("")
+      setPatientPhone("")
+    }
+  }, [bookingFor, user])
 
   const calculateTotal = () => {
     if (!test) return 0
@@ -391,20 +450,10 @@ export default function LabTestDetailPage() {
                       variant="outline"
                       className="w-full"
                       size="lg"
-                      disabled={addingToCart}
-                      onClick={handleAddToCart}
+                      onClick={openPatientDialog}
                     >
-                      {addingToCart ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Adding...
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingCart className="mr-2 h-5 w-5" />
-                          Add to Cart
-                        </>
-                      )}
+                      <ShoppingCart className="mr-2 h-5 w-5" />
+                      Add to Cart
                     </Button>
 
                     <div className="flex gap-2">
@@ -428,6 +477,139 @@ export default function LabTestDetailPage() {
               </Card>
             </div>
           </div>
+
+          {/* Patient Details Dialog */}
+          <Dialog open={showPatientDialog} onOpenChange={setShowPatientDialog}>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Patient Details</DialogTitle>
+                <DialogDescription>
+                  Please provide patient information for the lab test
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                {/* Booking For */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Who is this test for?</Label>
+                  <RadioGroup value={bookingFor} onValueChange={(value: "self" | "other") => setBookingFor(value)}>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="self" id="detail-self" />
+                      <Label htmlFor="detail-self" className="cursor-pointer font-normal">Myself</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="other" id="detail-other" />
+                      <Label htmlFor="detail-other" className="cursor-pointer font-normal">Someone Else</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                <Separator />
+
+                {/* Patient Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="detail-patient-name">Patient Name *</Label>
+                  <Input
+                    id="detail-patient-name"
+                    value={patientName}
+                    onChange={(e) => setPatientName(e.target.value)}
+                    placeholder="Enter patient name"
+                    required
+                  />
+                </div>
+
+                {/* Age and Gender */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="detail-patient-age">Age *</Label>
+                    <Input
+                      id="detail-patient-age"
+                      type="number"
+                      value={patientAge}
+                      onChange={(e) => setPatientAge(e.target.value)}
+                      placeholder="Age"
+                      required
+                      min="1"
+                      max="120"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="detail-patient-gender">Gender *</Label>
+                    <Select value={patientGender} onValueChange={setPatientGender} required>
+                      <SelectTrigger id="detail-patient-gender">
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-2">
+                  <Label htmlFor="detail-patient-phone">Phone Number *</Label>
+                  <Input
+                    id="detail-patient-phone"
+                    type="tel"
+                    value={patientPhone}
+                    onChange={(e) => setPatientPhone(e.target.value)}
+                    placeholder="Enter phone number"
+                    required
+                  />
+                </div>
+
+                {/* Disease (Optional) */}
+                <div className="space-y-2">
+                  <Label htmlFor="detail-patient-disease">Disease/Condition (Optional)</Label>
+                  <Input
+                    id="detail-patient-disease"
+                    value={patientDisease}
+                    onChange={(e) => setPatientDisease(e.target.value)}
+                    placeholder="e.g., Diabetes, Hypertension"
+                  />
+                </div>
+
+                {/* Test Info */}
+                {test && (
+                  <div className="rounded-lg bg-muted p-3 space-y-1">
+                    <p className="text-sm font-medium">{test.testName}</p>
+                    <p className="text-sm text-muted-foreground">₹{test.discountedPrice}</p>
+                    {isHomeCollection && test.isHomeCollectionAvailable && (
+                      <p className="text-xs text-muted-foreground">+ Home Collection: ₹{test.homeCollectionPrice}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowPatientDialog(false)}
+                  disabled={addingToCart}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleAddToCart}
+                  disabled={addingToCart}
+                >
+                  {addingToCart ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : (
+                    "Add to Cart"
+                  )}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
   )
 }
