@@ -186,12 +186,8 @@ export default function AppointmentsPage() {
                             <div className="flex gap-4">
                               <Avatar className="h-16 w-16 shrink-0">
                                 <AvatarImage 
-                                  src={doctor.profileImage || undefined} 
+                                  src={doctor.profileImage || "/placeholder.svg"} 
                                   alt={doctor.name}
-                                  onError={(e) => {
-                                    console.log("Doctor image failed to load:", doctor.profileImage)
-                                    e.currentTarget.style.display = 'none'
-                                  }}
                                 />
                                 <AvatarFallback className="bg-primary/10">
                                   {doctor.name

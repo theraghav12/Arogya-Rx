@@ -106,6 +106,26 @@ export default function LabTestDetailPage() {
     setShowPatientDialog(true)
   }
 
+  const handleBookingForChange = (value: "self" | "other") => {
+    setBookingFor(value)
+    
+    if (value === "self") {
+      // Pre-fill with user data
+      setPatientName(user?.name || "")
+      setPatientPhone(user?.contact || "")
+      setPatientAge("")
+      setPatientGender("")
+      setPatientDisease("")
+    } else {
+      // Clear all fields for someone else
+      setPatientName("")
+      setPatientAge("")
+      setPatientGender("")
+      setPatientPhone("")
+      setPatientDisease("")
+    }
+  }
+
   const handleAddToCart = async () => {
     if (!test) return
 
@@ -197,21 +217,21 @@ export default function LabTestDetailPage() {
   }
 
   return (
-    <div className="container px-4 py-8 md:px-6">
+    <div className="container max-w-7xl mx-auto px-4 py-6 md:py-8 md:px-6">
           {/* Breadcrumb */}
           <Button variant="ghost" className="mb-4 -ml-4" onClick={() => router.back()}>
             <ChevronLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
 
-          <div className="grid gap-8 lg:grid-cols-3">
+          <div className="grid gap-6 lg:gap-8 lg:grid-cols-3">
             {/* Main Content */}
             <div className="lg:col-span-2 space-y-6">
               {/* Header */}
               <div>
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
                   <div className="flex-1">
-                    <h1 className="text-3xl font-bold">{test.testName}</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold">{test.testName}</h1>
                     <p className="mt-2 text-muted-foreground">{test.category}</p>
                   </div>
                   <div className="flex gap-2">
@@ -237,7 +257,7 @@ export default function LabTestDetailPage() {
 
               {/* Description */}
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <h3 className="mb-3 text-lg font-semibold">About This Test</h3>
                   <p className="text-muted-foreground leading-relaxed">{test.description}</p>
                 </CardContent>
@@ -246,30 +266,30 @@ export default function LabTestDetailPage() {
               {/* Detailed Information Tabs */}
               <Tabs defaultValue="parameters" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="parameters">Parameters</TabsTrigger>
-                  <TabsTrigger value="preparation">Preparation</TabsTrigger>
-                  <TabsTrigger value="sample">Sample Info</TabsTrigger>
+                  <TabsTrigger value="parameters" className="text-xs sm:text-sm">Parameters</TabsTrigger>
+                  <TabsTrigger value="preparation" className="text-xs sm:text-sm">Preparation</TabsTrigger>
+                  <TabsTrigger value="sample" className="text-xs sm:text-sm">Sample Info</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="parameters" className="mt-6">
                   <Card>
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 sm:p-6">
                       <h3 className="mb-4 text-lg font-semibold">
                         Test Parameters ({test.parameters?.length || 0})
                       </h3>
                       {test.parameters && test.parameters.length > 0 ? (
                         <div className="space-y-3">
                           {test.parameters.map((param, index) => (
-                            <div key={index} className="rounded-lg border p-4">
-                              <div className="flex items-start justify-between mb-2">
+                            <div key={index} className="rounded-lg border p-3 sm:p-4">
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                                 <h4 className="font-medium">{param.name}</h4>
-                                <Badge variant="secondary" className="text-xs">
+                                <Badge variant="secondary" className="text-xs w-fit">
                                   {param.unit}
                                 </Badge>
                               </div>
                               <div className="space-y-1 text-sm">
                                 <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Info className="h-3 w-3" />
+                                  <Info className="h-3 w-3 shrink-0" />
                                   <span>Normal Range: {param.normalRange}</span>
                                 </div>
                                 {param.description && (
@@ -288,9 +308,9 @@ export default function LabTestDetailPage() {
 
                 <TabsContent value="preparation" className="mt-6">
                   <Card>
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 sm:p-6">
                       <h3 className="mb-4 text-lg font-semibold">Preparation Instructions</h3>
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 sm:p-4">
                         <div className="flex gap-3">
                           <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                           <div>
@@ -304,7 +324,7 @@ export default function LabTestDetailPage() {
 
                       <div className="mt-6 space-y-3">
                         <div className="flex items-center gap-3 rounded-lg border p-3">
-                          <Clock className="h-5 w-5 text-muted-foreground" />
+                          <Clock className="h-5 w-5 text-muted-foreground shrink-0" />
                           <div>
                             <p className="text-sm text-muted-foreground">Report Delivery Time</p>
                             <p className="font-medium">{test.reportDeliveryTime}</p>
@@ -317,12 +337,12 @@ export default function LabTestDetailPage() {
 
                 <TabsContent value="sample" className="mt-6">
                   <Card>
-                    <CardContent className="p-6">
+                    <CardContent className="p-4 sm:p-6">
                       <h3 className="mb-4 text-lg font-semibold">Sample Information</h3>
                       <div className="space-y-4">
                         {test.sampleType && (
-                          <div className="flex items-center gap-3 rounded-lg border p-4">
-                            <Beaker className="h-5 w-5 text-muted-foreground" />
+                          <div className="flex items-center gap-3 rounded-lg border p-3 sm:p-4">
+                            <Beaker className="h-5 w-5 text-muted-foreground shrink-0" />
                             <div>
                               <p className="text-sm text-muted-foreground">Sample Type</p>
                               <p className="font-medium">{test.sampleType}</p>
@@ -331,8 +351,8 @@ export default function LabTestDetailPage() {
                         )}
 
                         {test.sampleVolume && (
-                          <div className="flex items-center gap-3 rounded-lg border p-4">
-                            <FileText className="h-5 w-5 text-muted-foreground" />
+                          <div className="flex items-center gap-3 rounded-lg border p-3 sm:p-4">
+                            <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
                             <div>
                               <p className="text-sm text-muted-foreground">Sample Volume</p>
                               <p className="font-medium">{test.sampleVolume}</p>
@@ -341,7 +361,7 @@ export default function LabTestDetailPage() {
                         )}
 
                         {test.isHomeCollectionAvailable && (
-                          <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                          <div className="rounded-lg border border-green-200 bg-green-50 p-3 sm:p-4">
                             <div className="flex gap-3">
                               <Home className="h-5 w-5 text-green-600 shrink-0" />
                               <div>
@@ -365,8 +385,8 @@ export default function LabTestDetailPage() {
 
             {/* Sidebar - Booking Card */}
             <div className="lg:col-span-1">
-              <Card className="sticky top-20">
-                <CardContent className="p-6 space-y-6">
+              <Card className="lg:sticky lg:top-20">
+                <CardContent className="p-4 sm:p-6 space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold mb-4">Book This Test</h3>
 
@@ -375,7 +395,7 @@ export default function LabTestDetailPage() {
                       <div className="flex items-baseline justify-between">
                         <span className="text-muted-foreground">Test Price</span>
                         <div className="flex items-baseline gap-2">
-                          <span className="text-2xl font-bold">₹{test.discountedPrice}</span>
+                          <span className="text-xl sm:text-2xl font-bold">₹{test.discountedPrice}</span>
                           {test.discount > 0 && (
                             <span className="text-sm text-muted-foreground line-through">₹{test.price}</span>
                           )}
@@ -392,11 +412,12 @@ export default function LabTestDetailPage() {
                       {test.isHomeCollectionAvailable && (
                         <>
                           <Separator />
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-start gap-2">
                             <Checkbox
                               id="homeCollection"
                               checked={isHomeCollection}
                               onCheckedChange={(checked) => setIsHomeCollection(checked as boolean)}
+                              className="mt-1"
                             />
                             <Label htmlFor="homeCollection" className="cursor-pointer flex-1">
                               <div className="flex items-center justify-between">
@@ -494,7 +515,7 @@ export default function LabTestDetailPage() {
                 {/* Booking For */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Who is this test for?</Label>
-                  <RadioGroup value={bookingFor} onValueChange={(value: "self" | "other") => setBookingFor(value)}>
+                  <RadioGroup value={bookingFor} onValueChange={handleBookingForChange}>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="self" id="detail-self" />
                       <Label htmlFor="detail-self" className="cursor-pointer font-normal">Myself</Label>

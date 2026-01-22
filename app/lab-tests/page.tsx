@@ -193,6 +193,26 @@ export default function LabTestsPage() {
     setShowPatientDialog(true)
   }
 
+  const handleBookingForChange = (value: "self" | "other") => {
+    setBookingFor(value)
+    
+    if (value === "self") {
+      // Pre-fill with user data
+      setPatientName(user?.name || "")
+      setPatientPhone(user?.contact || "")
+      setPatientAge("")
+      setPatientGender("")
+      setPatientDisease("")
+    } else {
+      // Clear all fields for someone else
+      setPatientName("")
+      setPatientAge("")
+      setPatientGender("")
+      setPatientPhone("")
+      setPatientDisease("")
+    }
+  }
+
   const handleAddToCart = async () => {
     if (!selectedTest) return
 
@@ -825,7 +845,7 @@ export default function LabTestsPage() {
                 {/* Booking For */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Who is this test for?</Label>
-                  <RadioGroup value={bookingFor} onValueChange={(value: "self" | "other") => setBookingFor(value)}>
+                  <RadioGroup value={bookingFor} onValueChange={handleBookingForChange}>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="self" id="dialog-self" />
                       <Label htmlFor="dialog-self" className="cursor-pointer font-normal">Myself</Label>

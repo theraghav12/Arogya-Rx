@@ -225,12 +225,8 @@ export default function AppointmentDetailPage() {
                 <div className="flex gap-4">
                   <Avatar className="h-20 w-20 shrink-0">
                     <AvatarImage 
-                      src={doctor.profileImage || undefined} 
+                      src={doctor.profileImage || "/placeholder.svg"} 
                       alt={doctor.name}
-                      onError={(e) => {
-                        console.log("Doctor image failed to load:", doctor.profileImage)
-                        e.currentTarget.style.display = 'none'
-                      }}
                     />
                     <AvatarFallback className="text-lg bg-primary/10">
                       {doctor.name
@@ -451,7 +447,9 @@ export default function AppointmentDetailPage() {
                 </div>
               </div>
 
-              {appointment.paymentStatus === "pending" && appointment.status !== "cancelled" && (
+              {appointment.paymentStatus === "pending" && 
+               appointment.status !== "cancelled" && 
+               appointment.status !== "missed" && (
                 <>
                   <Separator />
                   <Button className="w-full" asChild>
@@ -460,6 +458,20 @@ export default function AppointmentDetailPage() {
                       Pay Now
                     </Link>
                   </Button>
+                </>
+              )}
+
+              {(appointment.paymentStatus === "pending" && 
+                (appointment.status === "cancelled" || appointment.status === "missed")) && (
+                <>
+                  <Separator />
+                  <Button className="w-full" disabled>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Payment Not Available
+                  </Button>
+                  <p className="text-xs text-center text-muted-foreground">
+                    Payment is not available for {appointment.status} appointments
+                  </p>
                 </>
               )}
 

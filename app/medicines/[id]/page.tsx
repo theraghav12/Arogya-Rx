@@ -22,7 +22,6 @@ import {
   Minus,
 } from "lucide-react"
 import { medicinesApi, type Medicine } from "@/lib/api/medicines"
-import { addToCart } from "@/lib/api/cart"
 import { useToast } from "@/hooks/use-toast"
 import { isAuthenticated } from "@/lib/auth-utils"
 import { format } from "date-fns"
@@ -36,12 +35,28 @@ export default function MedicineDetailPage() {
   const [quantity, setQuantity] = React.useState(1)
   const [addingToCart, setAddingToCart] = React.useState(false)
   const [selectedImage, setSelectedImage] = React.useState(0)
+  const [cartQuantity, setCartQuantity] = React.useState(0)
 
   React.useEffect(() => {
     if (params.id) {
       loadMedicine(params.id as string)
+      loadCartItems()
     }
   }, [params.id])
+
+  const loadCartItems = async () => {
+    try {
+      const { getCart } = await import("@/lib/api/cart")
+      const cartData = await getCart()
+      const medicineId = params.id as string
+      const cartItem = cartData.cart.items.find((item: any) => item.medicineId?._id === medicineId)
+      if (cartItem) {
+        setCartQuantity(cartItem.quantity)
+      }
+    } catch (error) {
+      // Cart might be empty or user not logged in
+    }
+  }
 
   const loadMedicine = async (id: string) => {
     if (!isAuthenticated()) {
@@ -51,8 +66,15 @@ export default function MedicineDetailPage() {
 
     setLoading(true)
     try {
-      const data = await medicinesApi.getById(id)
-      setMedicine(data)
+      const response = await medicinesApi.getById(id)
+      console.log("Medicine API response:", response) // Debug log
+      
+      // Handle both response formats: direct data or wrapped in success/data
+      const medicineData = response?.data || response
+      console.log("Medicine data:", medicineData) // Debug log
+      console.log("Stock info:", medicineData?.stock) // Debug log
+      
+      setMedicine(medicineData)
     } catch (error) {
       console.error("Failed to load medicine:", error)
       toast({
@@ -80,12 +102,14 @@ export default function MedicineDetailPage() {
 
     setAddingToCart(true)
     try {
+      const { addToCart } = await import("@/lib/api/cart")
       const result = await addToCart({
         medicineId: medicine._id,
-        quantity,
+        quantity: 1,
       })
 
       if (result.message) {
+        setCartQuantity(1)
         toast({
           title: "Success",
           description: `${medicine.productName} added to cart`,
@@ -95,6 +119,59 @@ export default function MedicineDetailPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to add to cart",
+        variant: "destructive",
+      })
+    } finally {
+      setAddingToCart(false)
+    }
+  }
+
+  const handleUpdateQuantity = async (newQuantity: number) => {
+    if (!medicine || newQuantity < 1) return
+
+    setAddingToCart(true)
+    try {
+      try {
+        const { updateCartQuantity } = await import("@/lib/api/cart")
+        await updateCartQuantity({
+          medicineId: medicine._id,
+          quantity: newQuantity,
+        })
+        setCartQuantity(newQuantity)
+      } catch (updateError: any) {
+        const { removeFromCart, addToCart } = await import("@/lib/api/cart")
+        await removeFromCart({ medicineId: medicine._id })
+        await addToCart({ medicineId: medicine._id, quantity: newQuantity })
+        setCartQuantity(newQuantity)
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update quantity",
+        variant: "destructive",
+      })
+      loadCartItems()
+    } finally {
+      setAddingToCart(false)
+    }
+  }
+
+  const handleRemoveFromCart = async () => {
+    if (!medicine) return
+
+    setAddingToCart(true)
+    try {
+      const { removeFromCart } = await import("@/lib/api/cart")
+      await removeFromCart({ medicineId: medicine._id })
+      setCartQuantity(0)
+      toast({
+        title: "Success",
+        description: "Item removed from cart",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove item",
         variant: "destructive",
       })
     } finally {
@@ -127,7 +204,19 @@ export default function MedicineDetailPage() {
     )
   }
 
-  const inStock = medicine.stock.quantity > 0
+  // Check stock availability - handle multiple formats
+  const stockQuantity = medicine.stock?.quantity ?? 0
+  const stockAvailable = medicine.stock?.available ?? true
+  const stockInStock = medicine.stock?.inStock ?? (stockQuantity > 0)
+  const inStock = stockAvailable && (stockQuantity > 0 || stockInStock)
+
+  console.log("Medicine stock check:", {
+    quantity: stockQuantity,
+    available: stockAvailable,
+    inStock: stockInStock,
+    finalInStock: inStock,
+    rawStock: medicine.stock
+  }) // Debug log
 
   return (
     <div className="container px-4 py-8 md:px-6">
@@ -251,64 +340,85 @@ export default function MedicineDetailPage() {
               {/* Availability Status */}
               <div>
                 {inStock ? (
-                  <Badge variant="secondary" className="bg-green-100 text-green-800">
-                    Available
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      In Stock
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {stockQuantity} {medicine.stock?.unit || 'units'} available
+                    </span>
+                  </div>
                 ) : (
                   <Badge variant="destructive">Currently Unavailable</Badge>
                 )}
               </div>
 
-              {/* Quantity Selector */}
-              {inStock && (
-                <div className="flex items-center gap-4">
-                  <span className="font-medium">Quantity:</span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      disabled={quantity <= 1}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="w-12 text-center font-medium">{quantity}</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setQuantity(Math.min(medicine.stock.quantity, quantity + 1))}
-                      disabled={quantity >= medicine.stock.quantity}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <Separator />
 
               {/* Action Buttons */}
               <div className="flex gap-3">
-                <Button
-                  className="flex-1"
-                  size="lg"
-                  disabled={!inStock || addingToCart}
-                  onClick={handleAddToCart}
-                >
-                  {addingToCart ? (
-                    <>
-                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Adding...
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingCart className="mr-2 h-5 w-5" />
-                      Add to Cart
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" size="icon">
+                {cartQuantity > 0 ? (
+                  <div className="flex items-center gap-2 flex-1 border rounded-lg overflow-hidden">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 rounded-none hover:bg-primary hover:text-primary-foreground"
+                      disabled={addingToCart}
+                      onClick={() => {
+                        if (cartQuantity === 1) {
+                          handleRemoveFromCart()
+                        } else {
+                          handleUpdateQuantity(cartQuantity - 1)
+                        }
+                      }}
+                    >
+                      {cartQuantity === 1 ? (
+                        <ShoppingCart className="h-5 w-5" />
+                      ) : (
+                        <Minus className="h-5 w-5" />
+                      )}
+                    </Button>
+                    <div className="flex-1 text-center font-semibold text-lg bg-muted/50 h-12 flex items-center justify-center">
+                      {addingToCart ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        `${cartQuantity} in cart`
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-12 w-12 rounded-none hover:bg-primary hover:text-primary-foreground"
+                      disabled={addingToCart || cartQuantity >= stockQuantity}
+                      onClick={() => handleUpdateQuantity(cartQuantity + 1)}
+                    >
+                      <Plus className="h-5 w-5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    className="flex-1"
+                    size="lg"
+                    disabled={!inStock || addingToCart}
+                    onClick={handleAddToCart}
+                  >
+                    {addingToCart ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="mr-2 h-5 w-5" />
+                        Add to Cart
+                      </>
+                    )}
+                  </Button>
+                )}
+                <Button variant="outline" size="icon" className="h-12 w-12">
                   <Heart className="h-5 w-5" />
                 </Button>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" className="h-12 w-12">
                   <Share2 className="h-5 w-5" />
                 </Button>
               </div>
