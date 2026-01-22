@@ -217,7 +217,7 @@ export function AIChatbot({ onClose, isMinimized, onToggleMinimize }: AIChatbotP
   }
 
   return (
-    <Card className="w-96 h-[600px] shadow-2xl flex flex-col">
+    <Card className="w-96 h-[600px] shadow-2xl flex flex-col overflow-hidden">
       <CardHeader className="p-4 bg-primary text-primary-foreground shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -258,8 +258,8 @@ export function AIChatbot({ onClose, isMinimized, onToggleMinimize }: AIChatbotP
         </div>
       </CardHeader>
 
-      <ScrollArea className="flex-1 p-4">
-        <div className="space-y-4">
+      <ScrollArea className="flex-1 overflow-y-auto">
+        <div className="p-4 space-y-4">
           {messages.map((msg, index) => (
             <div
               key={index}
@@ -275,7 +275,7 @@ export function AIChatbot({ onClose, isMinimized, onToggleMinimize }: AIChatbotP
 
               <div className={`flex flex-col gap-2 max-w-[75%] ${!msg.isAI && "items-end"}`}>
                 <div
-                  className={`rounded-lg p-3 ${
+                  className={`rounded-lg p-3 break-words ${
                     msg.isAI
                       ? msg.isError
                         ? "bg-destructive/10 text-destructive"
@@ -283,7 +283,7 @@ export function AIChatbot({ onClose, isMinimized, onToggleMinimize }: AIChatbotP
                       : "bg-primary text-primary-foreground"
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{msg.content}</p>
                 </div>
 
                 {msg.recommendations && msg.recommendations.length > 0 && (
@@ -299,12 +299,12 @@ export function AIChatbot({ onClose, isMinimized, onToggleMinimize }: AIChatbotP
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
                                 <Stethoscope className="h-4 w-4 text-primary" />
-                                <p className="font-semibold text-sm">{rec.data.name}</p>
+                                <p className="font-semibold text-sm break-words">{rec.data.name}</p>
                               </div>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-muted-foreground break-words">
                                 {rec.data.specialization}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-muted-foreground break-words">
                                 {rec.data.qualification}
                               </p>
                               <div className="flex items-center justify-between mt-2">
@@ -322,10 +322,10 @@ export function AIChatbot({ onClose, isMinimized, onToggleMinimize }: AIChatbotP
                             <div className="space-y-1">
                               <div className="flex items-center gap-2">
                                 <ShoppingBag className="h-4 w-4 text-primary" />
-                                <p className="font-semibold text-sm">{rec.data.productName}</p>
+                                <p className="font-semibold text-sm break-words">{rec.data.productName}</p>
                               </div>
-                              <p className="text-xs text-muted-foreground">{rec.data.brandName}</p>
-                              <p className="text-xs text-muted-foreground line-clamp-2">
+                              <p className="text-xs text-muted-foreground break-words">{rec.data.brandName}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-2 break-words">
                                 {rec.data.description}
                               </p>
                               <div className="flex items-center justify-between mt-2">
