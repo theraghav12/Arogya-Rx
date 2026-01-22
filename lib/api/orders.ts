@@ -258,7 +258,7 @@ export async function placeOrder(data: PlaceOrderRequest): Promise<PlaceOrderRes
 }
 
 /**
- * Get all orders with pagination
+ * Get all orders with pagination (simple view)
  */
 export async function getOrders(page = 1, limit = 10): Promise<OrdersResponse> {
   const token = getAuthToken();
@@ -267,7 +267,7 @@ export async function getOrders(page = 1, limit = 10): Promise<OrdersResponse> {
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(`${API_BASE_URL}/orders?page=${page}&limit=${limit}`, {
+  const response = await fetch(`${API_BASE_URL}/orders/simple?page=${page}&limit=${limit}`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -435,7 +435,7 @@ export async function getOrderStatistics(): Promise<{ success: boolean; message:
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(`${API_BASE_URL}/orders/statistics`, {
+  const response = await fetch(`${API_BASE_URL}/orders/stats/overview`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },

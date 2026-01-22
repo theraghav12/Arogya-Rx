@@ -286,81 +286,115 @@ export default function OrderDetailPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {order.items.map((item, index) => (
-                  <div key={index}>
-                    {index > 0 && <Separator className="my-4" />}
-                    <div className="flex gap-4">
-                      <div className="relative h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
-                        {item.medicine && (
-                          <Image
-                            src={item.medicine.image}
-                            alt={item.medicine.productName}
-                            fill
-                            className="object-cover"
-                          />
-                        )}
-                        {item.labTest && (
-                          <div className="h-full w-full flex items-center justify-center bg-blue-100">
-                            <FileText className="h-10 w-10 text-blue-600" />
-                          </div>
-                        )}
-                      </div>
+                {order.items.map((item, index) => {
+                  // Extract product details
+                  let productName = 'Unknown Item';
+                  let productImage = '';
+                  let productCategory = '';
+                  
+                  if (item.productType === 'medicine' && item.medicine) {
+                    productName = item.medicine.productName;
+                    productImage = item.medicine.image;
+                    productCategory = item.medicine.category;
+                  } else if (item.productType === 'categoryProduct' && item.categoryProduct) {
+                    productName = item.categoryProduct.productName;
+                    productImage = item.categoryProduct.image;
+                  } else if (item.productType === 'labTest' && item.labTest) {
+                    productName = item.labTest.testName;
+                    productCategory = item.labTest.description;
+                  }
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1">
-                            <h4 className="font-semibold line-clamp-1">
-                              {item.medicine?.productName || item.labTest?.testName}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {item.medicine?.category || item.labTest?.description}
-                            </p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="secondary" className="text-xs">
-                                {item.productType === 'medicine' ? 'Medicine' : 'Lab Test'}
-                              </Badge>
-                              {item.isHomeCollection && (
-                                <Badge variant="outline" className="text-xs">
-                                  Home Collection
+                  return (
+                    <div key={index}>
+                      {index > 0 && <Separator className="my-4" />}
+                      <div className="flex gap-4">
+                        <div className="relative h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100">
+                          {productImage ? (
+                            <Image
+                              src={productImage}
+                              alt={productName}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center bg-blue-100">
+                              <FileText className="h-10 w-10 text-blue-600" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <h4 className="font-semibold line-clamp-1">
+                                {productName}
+                              </h4>
+                              {productCategory && (
+                                <p className="text-sm text-muted-foreground">
+                                  {productCategory}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="secondary" className="text-xs">
+                                  {item.productType === 'medicine' ? 'Medicine' : 
+                                   item.productType === 'categoryProduct' ? 'Product' : 'Lab Test'}
                                 </Badge>
+                                {item.isHomeCollection && (
+                                  <Badge variant="outline" className="text-xs">
+                                    Home Collection
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="text-right">
+                              <p className="font-semibold">₹{item.price * item.quantity}</p>
+                              <p className="text-sm text-muted-foreground">
+                                ₹{item.price} × {item.quantity}
+                              </p>
+                              {item.homeCollectionPrice && (
+                                <p className="text-xs text-muted-foreground">
+                                  + ₹{item.homeCollectionPrice} (Collection)
+                                </p>
                               )}
                             </div>
                           </div>
 
-                          <div className="text-right">
-                            <p className="font-semibold">₹{item.price * item.quantity}</p>
-                            <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                          </div>
-                        </div>
-
-                        {/* Lab Test Details */}
-                        {item.productType === 'labTest' && item.labTestPatientDetails && (
-                          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-1 text-sm">
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-blue-600" />
-                              <span className="font-medium">Patient: {item.labTestPatientDetails.name}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-muted-foreground">
-                              <span>{item.labTestPatientDetails.gender}, {item.labTestPatientDetails.age} years</span>
-                            </div>
-                            {item.labTestSampleOTP && (
-                              <div className="flex items-center gap-2 text-muted-foreground">
-                                <span>Sample OTP: <strong>{item.labTestSampleOTP}</strong></span>
-                              </div>
-                            )}
-                            {item.labTestStatus && (
+                          {/* Lab Test Details */}
+                          {item.productType === 'labTest' && item.labTestPatientDetails && (
+                            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-1 text-sm">
                               <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">
-                                  Status: {item.labTestStatus}
-                                </Badge>
+                                <User className="h-4 w-4 text-blue-600" />
+                                <span className="font-medium">Patient: {item.labTestPatientDetails.name}</span>
                               </div>
-                            )}
-                          </div>
-                        )}
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <span>{item.labTestPatientDetails.gender}, {item.labTestPatientDetails.age} years</span>
+                              </div>
+                              {item.labTestPatientDetails.phone && (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Phone className="h-3 w-3" />
+                                  <span>{item.labTestPatientDetails.phone}</span>
+                                </div>
+                              )}
+                              {item.labTestSampleOTP && (
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <span>Sample OTP: <strong>{item.labTestSampleOTP}</strong></span>
+                                </div>
+                              )}
+                              {item.labTestStatus && (
+                                <div className="flex items-center gap-2">
+                                  <Badge variant="outline" className="text-xs">
+                                    Status: {item.labTestStatus}
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

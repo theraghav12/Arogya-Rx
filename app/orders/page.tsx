@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Package, Calendar, CreditCard, Truck, FileText, RefreshCw, Filter, Download } from 'lucide-react';
-import { getOrders, getOrderStatistics, type Order, type OrderStatistics } from '@/lib/api/orders';
+import { getOrders, getOrderStatistics, getOrdersWithFilters, type Order, type OrderStatistics } from '@/lib/api/orders';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,15 +23,32 @@ export default function OrdersPage() {
 
   useEffect(() => {
     fetchData();
-  }, [currentPage]);
+  }, [currentPage, activeTab]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [ordersData, statsData] = await Promise.all([
-        getOrders(currentPage, 10),
-        getOrderStatistics(),
-      ]);
+      
+      // Fetch orders with optional status filter
+      let ordersData;
+      if (activeTab === 'all') {
+        ordersData = await getOrders(currentPage, 10);
+      } else {
+        // Map tab to status
+        const statusMap: Record<string, string> = {
+          'processing': 'Processing',
+          'shipped': 'Shipped',
+          'delivered': 'Delivered',
+        };
+        const status = statusMap[activeTab];
+        ordersData = await getOrdersWithFilters({
+          page: currentPage,
+          limit: 10,
+          status: status,
+        });
+      }
+
+      const statsData = await getOrderStatistics();
 
       setOrders(ordersData.data.orders);
       setTotalPages(ordersData.data.pagination.totalPages);
@@ -68,8 +85,8 @@ export default function OrdersPage() {
   };
 
   const filterOrdersByStatus = (status: string) => {
-    if (status === 'all') return orders;
-    return orders.filter(order => order.status.toLowerCase().includes(status.toLowerCase()));
+    // Filtering is now done server-side, so just return all orders
+    return orders;
   };
 
   if (loading) {
@@ -159,9 +176,17 @@ export default function OrdersPage() {
             <Card>
               <CardContent className="p-12 text-center">
                 <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-xl font-semibold mb-2">No orders found</h3>
-                <p className="text-muted-foreground mb-4">You haven't placed any orders yet</p>
-                <Button onClick={() => router.push('/')}>Start Shopping</Button>
+                <h3 className="text-xl font-semibold mb-2">
+                  {activeTab === 'all' ? 'No orders found' : `No ${activeTab} orders`}
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  {activeTab === 'all' 
+                    ? "You haven't placed any orders yet" 
+                    : `You don't have any ${activeTab} orders at the moment`}
+                </p>
+                {activeTab === 'all' && (
+                  <Button onClick={() => router.push('/')}>Start Shopping</Button>
+                )}
               </CardContent>
             </Card>
           ) : (
@@ -202,28 +227,42 @@ export default function OrdersPage() {
                     </div>
 
                     {/* Order Items Preview */}
-                    <div className="flex gap-2 mb-4 overflow-x-auto">
-                      {order.items.slice(0, 4).map((item, index) => (
-                        <div key={index} className="flex-shrink-0">
-                          {item.medicine && (
-                            <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-gray-100">
-                              <Image
-                                src={item.medicine.image}
-                                alt={item.medicine.productName}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                          )}
-                          {item.labTest && (
-                            <div className="h-16 w-16 rounded-lg bg-blue-100 flex items-center justify-center">
-                              <FileText className="h-8 w-8 text-blue-600" />
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                    <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                      {order.items.slice(0, 4).map((item, index) => {
+                        let imageUrl = '';
+                        let itemName = '';
+                        
+                        if (item.medicine) {
+                          imageUrl = item.medicine.image;
+                          itemName = item.medicine.productName;
+                        } else if (item.categoryProduct) {
+                          imageUrl = item.categoryProduct.image;
+                          itemName = item.categoryProduct.productName;
+                        } else if (item.labTest) {
+                          itemName = item.labTest.testName;
+                        }
+
+                        return (
+                          <div key={index} className="flex-shrink-0" title={itemName}>
+                            {imageUrl ? (
+                              <div className="relative h-16 w-16 rounded-lg overflow-hidden bg-gray-100 border">
+                                <Image
+                                  src={imageUrl}
+                                  alt={itemName}
+                                  fill
+                                  className="object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="h-16 w-16 rounded-lg bg-blue-100 flex items-center justify-center border">
+                                <FileText className="h-8 w-8 text-blue-600" />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                       {order.items.length > 4 && (
-                        <div className="h-16 w-16 rounded-lg bg-gray-100 flex items-center justify-center text-sm font-medium">
+                        <div className="h-16 w-16 rounded-lg bg-gray-100 flex items-center justify-center text-sm font-medium border">
                           +{order.items.length - 4}
                         </div>
                       )}

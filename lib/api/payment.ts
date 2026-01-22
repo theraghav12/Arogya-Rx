@@ -66,7 +66,7 @@ export async function createOrderPayment(data: CreateOrderPaymentRequest): Promi
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(`${API_BASE_URL}/payment/create-order`, {
+  const response = await fetch(`${API_BASE_URL}/payment/orders/create-payment`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -193,7 +193,7 @@ export function loadRazorpayScript(): Promise<boolean> {
 export async function initiateRazorpayPayment(
   paymentData: CreateOrderPaymentResponse | CreateAppointmentPaymentResponse,
   userDetails: { name: string; email: string; contact: string },
-  onSuccess: () => void,
+  onSuccess: (verifyResult: VerifyPaymentResponse) => void,
   onFailure: (error: string) => void
 ): Promise<void> {
   const scriptLoaded = await loadRazorpayScript();
@@ -220,7 +220,7 @@ export async function initiateRazorpayPayment(
         });
 
         if (verifyResult.success) {
-          onSuccess();
+          onSuccess(verifyResult);
         } else {
           onFailure('Payment verification failed');
         }

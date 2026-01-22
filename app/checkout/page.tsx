@@ -255,13 +255,15 @@ export default function CheckoutPage() {
             email: user?.email || '',
             contact: contact,
           },
-          () => {
+          (verifyResult) => {
             // Payment success
             toast({
               title: 'Success',
               description: 'Payment successful! Order placed.',
             });
-            router.push(`/orders/${paymentData.orderId}`);
+            // Use the order ID from verification result
+            const orderId = verifyResult.order?.id || verifyResult.order?._id || paymentData.orderId;
+            router.push(`/orders/${orderId}`);
           },
           (error) => {
             // Payment failure

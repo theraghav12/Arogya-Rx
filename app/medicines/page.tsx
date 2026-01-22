@@ -101,14 +101,24 @@ export default function MedicinesPage() {
 
       const response = await medicinesApi.getMedicines(params)
       
-      console.log("API Response:", response) // Debug log
+      console.log("=== MEDICINES API RESPONSE ===")
+      console.log("Full Response:", response)
+      console.log("Medicines Count:", response.data?.length)
+      console.log("Total Medicines:", response.totalMedicines)
+      console.log("Total Pages:", response.totalPages)
+      console.log("Current Page:", response.currentPage)
+      console.log("Params sent:", params)
+      console.log("==============================")
       
       if (response.success) {
-        setMedicines(response.data)
+        // IMPORTANT: Always replace, never append
+        const newMedicines = response.data || []
+        console.log("Setting medicines array with length:", newMedicines.length)
+        setMedicines(newMedicines)
         setTotalPages(response.totalPages || 1)
-        setTotalMedicines(response.totalMedicines || response.data.length)
-        console.log("Total Pages:", response.totalPages, "Total Medicines:", response.totalMedicines) // Debug log
+        setTotalMedicines(response.totalMedicines || newMedicines.length)
       } else {
+        console.log("API returned success: false, clearing medicines")
         setMedicines([])
         setTotalPages(1)
         setTotalMedicines(0)
