@@ -186,20 +186,20 @@ export function AIChatbotFloat() {
       >
         {/* Robot Face */}
         <div className="relative w-full h-full">
-          {/* Main circle with gradient */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-600 shadow-lg group-hover:shadow-2xl transition-all duration-300 group-hover:scale-105">
+          {/* Main circle with theme gradient */}
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary via-primary/90 to-primary/80 shadow-lg group-hover:shadow-2xl transition-all duration-300 group-hover:scale-105">
             {/* Glossy shine effect */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/40 via-white/10 to-transparent" />
             
             {/* Inner glow */}
-            <div className="absolute inset-2 rounded-full bg-gradient-to-br from-blue-400/20 to-transparent" />
+            <div className="absolute inset-2 rounded-full bg-gradient-to-br from-primary/20 to-transparent" />
             
             {/* Robot face elements */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               {/* Antenna with glow */}
               <div className="absolute top-1 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                <div className="w-1 h-3 bg-gradient-to-b from-white/80 to-white/40 rounded-full" />
-                <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-yellow-300 to-orange-400 shadow-lg animate-pulse" />
+                <div className="w-1 h-3 bg-gradient-to-b from-primary-foreground/80 to-primary-foreground/40 rounded-full" />
+                <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-accent via-accent/80 to-accent/60 shadow-lg animate-pulse" />
               </div>
               
               {/* Head/Face container */}
@@ -207,56 +207,56 @@ export function AIChatbotFloat() {
                 {/* Eyes with shine */}
                 <div className="flex gap-4">
                   <div className="relative">
-                    <div className="w-3.5 h-3.5 rounded-full bg-white shadow-inner" />
-                    <div className="absolute top-0.5 left-0.5 w-2 h-2 rounded-full bg-gradient-to-br from-blue-900 to-blue-700" />
-                    <div className="absolute top-0.5 left-1 w-1 h-1 rounded-full bg-white/80" />
+                    <div className="w-3.5 h-3.5 rounded-full bg-primary-foreground shadow-inner" />
+                    <div className="absolute top-0.5 left-0.5 w-2 h-2 rounded-full bg-gradient-to-br from-primary to-primary/70" />
+                    <div className="absolute top-0.5 left-1 w-1 h-1 rounded-full bg-primary-foreground/80" />
                   </div>
                   <div className="relative">
-                    <div className="w-3.5 h-3.5 rounded-full bg-white shadow-inner" />
-                    <div className="absolute top-0.5 left-0.5 w-2 h-2 rounded-full bg-gradient-to-br from-blue-900 to-blue-700" />
-                    <div className="absolute top-0.5 left-1 w-1 h-1 rounded-full bg-white/80" />
+                    <div className="w-3.5 h-3.5 rounded-full bg-primary-foreground shadow-inner" />
+                    <div className="absolute top-0.5 left-0.5 w-2 h-2 rounded-full bg-gradient-to-br from-primary to-primary/70" />
+                    <div className="absolute top-0.5 left-1 w-1 h-1 rounded-full bg-primary-foreground/80" />
                   </div>
                 </div>
                 
                 {/* Nose/Sensor */}
-                <div className="w-1.5 h-1.5 rounded-full bg-white/60" />
+                <div className="w-1.5 h-1.5 rounded-full bg-primary-foreground/60" />
                 
                 {/* Smile with gradient */}
                 <div className="relative">
-                  <div className="w-8 h-4 border-b-[3px] border-white rounded-b-full" />
+                  <div className="w-8 h-4 border-b-[3px] border-primary-foreground rounded-b-full" />
                   {/* Smile highlights */}
-                  <div className="absolute bottom-0 left-1 w-1.5 h-1 bg-white/40 rounded-full" />
-                  <div className="absolute bottom-0 right-1 w-1.5 h-1 bg-white/40 rounded-full" />
+                  <div className="absolute bottom-0 left-1 w-1.5 h-1 bg-primary-foreground/40 rounded-full" />
+                  <div className="absolute bottom-0 right-1 w-1.5 h-1 bg-primary-foreground/40 rounded-full" />
                 </div>
               </div>
 
-              {/* Cheek blush */}
-              <div className="absolute top-1/2 left-2 w-2 h-1.5 rounded-full bg-pink-300/30" />
-              <div className="absolute top-1/2 right-2 w-2 h-1.5 rounded-full bg-pink-300/30" />
+              {/* Cheek blush - using accent color */}
+              <div className="absolute top-1/2 left-2 w-2 h-1.5 rounded-full bg-accent/20" />
+              <div className="absolute top-1/2 right-2 w-2 h-1.5 rounded-full bg-accent/20" />
             </div>
 
             {/* Rotating glow ring */}
-            <div className="absolute inset-0 rounded-full border-2 border-white/20 animate-spin" style={{ animationDuration: '3s' }} />
+            <div className="absolute inset-0 rounded-full border-2 border-primary-foreground/20 animate-spin" style={{ animationDuration: '3s' }} />
             
             {/* Pulse animation ring */}
-            <div className="absolute inset-0 rounded-full border-2 border-blue-300 animate-ping opacity-20" />
+            <div className="absolute inset-0 rounded-full border-2 border-primary/60 animate-ping opacity-20" />
           </div>
 
           {/* Notification badge */}
           {!isOpen && (
-            <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shadow-lg animate-pulse">
-              <div className="h-2 w-2 rounded-full bg-white" />
+            <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-gradient-to-br from-accent via-accent/90 to-accent/80 flex items-center justify-center shadow-lg animate-pulse">
+              <div className="h-2 w-2 rounded-full bg-primary-foreground" />
             </div>
           )}
         </div>
 
         {/* Tooltip */}
-        <div className="absolute left-1/2 -translate-x-1/2 -top-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl pointer-events-none">
+        <div className="absolute left-1/2 -translate-x-1/2 -top-14 bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl pointer-events-none">
           <div className="flex items-center gap-2">
             <Bot className="h-4 w-4" />
             <span>Chat with AI Doctor</span>
           </div>
-          <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-indigo-600" />
+          <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-primary" />
         </div>
       </button>
 
