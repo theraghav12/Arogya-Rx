@@ -230,27 +230,32 @@ export default function MedicineDetailPage() {
                 <div className="flex items-center gap-2">
                   <Calendar className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">Expiry</p>
-                    <p className="font-medium">{format(new Date(medicine.packaging.expiryDate), "MMM yyyy")}</p>
+                    <p className="text-sm text-muted-foreground">Manufacturer</p>
+                    <p className="font-medium">{medicine.manufacturer}</p>
                   </div>
                 </div>
+
+                {medicine.dosage.recommendedDosage && (
+                  <div className="flex items-center gap-2 sm:col-span-2">
+                    <Info className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm text-muted-foreground">Recommended Dosage</p>
+                      <p className="font-medium">{medicine.dosage.recommendedDosage}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <Separator />
 
-              {/* Stock Status */}
+              {/* Availability Status */}
               <div>
                 {inStock ? (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
-                      In Stock
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {medicine.stock.quantity} {medicine.stock.unit} available
-                    </span>
-                  </div>
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    Available
+                  </Badge>
                 ) : (
-                  <Badge variant="destructive">Out of Stock</Badge>
+                  <Badge variant="destructive">Currently Unavailable</Badge>
                 )}
               </div>
 
@@ -363,12 +368,21 @@ export default function MedicineDetailPage() {
                       <div>
                         <h4 className="mb-2 font-medium">Active Ingredients</h4>
                         <ul className="space-y-2">
-                          {medicine.composition.activeIngredients.map((ingredient, index) => (
-                            <li key={index} className="flex items-center justify-between rounded-lg border p-3">
-                              <span>{ingredient.name}</span>
-                              <Badge variant="secondary">{ingredient.strength}</Badge>
-                            </li>
-                          ))}
+                          {Array.isArray(medicine.composition.activeIngredients) && 
+                           typeof medicine.composition.activeIngredients[0] === 'object' ? (
+                            medicine.composition.activeIngredients.map((ingredient: any, index) => (
+                              <li key={index} className="flex items-center justify-between rounded-lg border p-3">
+                                <span>{ingredient.name || ingredient}</span>
+                                {ingredient.strength && <Badge variant="secondary">{ingredient.strength}</Badge>}
+                              </li>
+                            ))
+                          ) : (
+                            (medicine.composition.activeIngredients as string[]).map((ingredient, index) => (
+                              <li key={index} className="flex items-center rounded-lg border p-3">
+                                <span>{ingredient}</span>
+                              </li>
+                            ))
+                          )}
                         </ul>
                       </div>
 
@@ -432,22 +446,70 @@ export default function MedicineDetailPage() {
                   <CardContent className="p-6">
                     <h3 className="mb-4 text-lg font-semibold">Warnings & Precautions</h3>
                     <div className="space-y-4">
-                      <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                        <div className="flex gap-3">
-                          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                          <div>
-                            <h4 className="font-medium text-amber-900">Important Warnings</h4>
-                            <p className="mt-2 text-sm text-amber-800 leading-relaxed">{medicine.warnings}</p>
+                      {(medicine.warnings || (medicine.regulatory?.warnings && medicine.regulatory.warnings.length > 0)) && (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                          <div className="flex gap-3">
+                            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                            <div>
+                              <h4 className="font-medium text-amber-900">Important Warnings</h4>
+                              {medicine.warnings ? (
+                                <p className="mt-2 text-sm text-amber-800 leading-relaxed">{medicine.warnings}</p>
+                              ) : medicine.regulatory?.warnings && (
+                                <ul className="mt-2 space-y-1">
+                                  {medicine.regulatory.warnings.map((warning, index) => (
+                                    <li key={index} className="text-sm text-amber-800 leading-relaxed">• {warning}</li>
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
 
-                      {medicine.contraindications && (
+                      {(medicine.sideEffects || (medicine.regulatory?.sideEffects && medicine.regulatory.sideEffects.length > 0)) && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h4 className="mb-2 font-medium">Possible Side Effects</h4>
+                            {medicine.sideEffects ? (
+                              <p className="text-muted-foreground leading-relaxed">{medicine.sideEffects}</p>
+                            ) : medicine.regulatory?.sideEffects && (
+                              <ul className="space-y-1">
+                                {medicine.regulatory.sideEffects.map((effect, index) => (
+                                  <li key={index} className="text-muted-foreground">• {effect}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {(medicine.contraindications || (medicine.regulatory?.contraindications && medicine.regulatory.contraindications.length > 0)) && (
                         <>
                           <Separator />
                           <div>
                             <h4 className="mb-2 font-medium">Contraindications</h4>
-                            <p className="text-muted-foreground leading-relaxed">{medicine.contraindications}</p>
+                            {medicine.contraindications ? (
+                              <p className="text-muted-foreground leading-relaxed">{medicine.contraindications}</p>
+                            ) : medicine.regulatory?.contraindications && (
+                              <ul className="space-y-1">
+                                {medicine.regulatory.contraindications.map((contra, index) => (
+                                  <li key={index} className="text-muted-foreground">• {contra}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        </>
+                      )}
+
+                      {medicine.regulatory?.interactions && medicine.regulatory.interactions.length > 0 && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h4 className="mb-2 font-medium">Drug Interactions</h4>
+                            <p className="text-muted-foreground">
+                              May interact with: {medicine.regulatory.interactions.join(", ")}
+                            </p>
                           </div>
                         </>
                       )}
@@ -461,10 +523,12 @@ export default function MedicineDetailPage() {
                   <CardContent className="p-6">
                     <h3 className="mb-4 text-lg font-semibold">Storage & Handling</h3>
                     <div className="space-y-4">
-                      {medicine.storageConditions && (
+                      {(medicine.storageConditions || medicine.packaging.storageInstructions) && (
                         <div>
                           <h4 className="mb-2 font-medium">Storage Conditions</h4>
-                          <p className="text-muted-foreground leading-relaxed">{medicine.storageConditions}</p>
+                          <p className="text-muted-foreground leading-relaxed">
+                            {medicine.storageConditions || medicine.packaging.storageInstructions}
+                          </p>
                         </div>
                       )}
 
@@ -490,19 +554,52 @@ export default function MedicineDetailPage() {
                         </div>
                       </div>
 
-                      {medicine.regulatory && (
+                      {(medicine.regulatory?.drugType || medicine.regulatory?.drugLicenseNumber || medicine.regulatory?.scheduleType) && (
                         <>
                           <Separator />
                           <div>
                             <h4 className="mb-2 font-medium">Regulatory Information</h4>
                             <div className="grid gap-3 sm:grid-cols-2">
+                              {medicine.regulatory.drugType && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">Drug Type</p>
+                                  <p className="font-medium">{medicine.regulatory.drugType}</p>
+                                </div>
+                              )}
+                              {medicine.regulatory.drugLicenseNumber && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">Drug License Number</p>
+                                  <p className="font-medium">{medicine.regulatory.drugLicenseNumber}</p>
+                                </div>
+                              )}
+                              {medicine.regulatory.scheduleType && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">Schedule Type</p>
+                                  <p className="font-medium">{medicine.regulatory.scheduleType}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {medicine.tax && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h4 className="mb-2 font-medium">Tax Information</h4>
+                            <div className="grid gap-3 sm:grid-cols-2">
                               <div className="rounded-lg border p-3">
-                                <p className="text-sm text-muted-foreground">Drug License Number</p>
-                                <p className="font-medium">{medicine.regulatory.drugLicenseNumber}</p>
+                                <p className="text-sm text-muted-foreground">HSN Code</p>
+                                <p className="font-medium">{medicine.tax.hsnCode}</p>
                               </div>
                               <div className="rounded-lg border p-3">
-                                <p className="text-sm text-muted-foreground">Schedule Type</p>
-                                <p className="font-medium">{medicine.regulatory.scheduleType}</p>
+                                <p className="text-sm text-muted-foreground">HSN Name</p>
+                                <p className="font-medium">{medicine.tax.hsnName}</p>
+                              </div>
+                              <div className="rounded-lg border p-3">
+                                <p className="text-sm text-muted-foreground">GST Rate</p>
+                                <p className="font-medium">{medicine.tax.igst}% (SGST: {medicine.tax.sgst}% + CGST: {medicine.tax.cgst}%)</p>
                               </div>
                             </div>
                           </div>

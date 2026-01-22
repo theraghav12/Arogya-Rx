@@ -807,8 +807,13 @@ export default function LabTestsPage() {
           </div>
 
           {/* Patient Details Dialog */}
-          <Dialog open={showPatientDialog} onOpenChange={setShowPatientDialog}>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <Dialog open={showPatientDialog} onOpenChange={(open) => {
+            setShowPatientDialog(open)
+            if (!open) {
+              setSelectedTest(null)
+            }
+          }}>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
               <DialogHeader>
                 <DialogTitle>Patient Details</DialogTitle>
                 <DialogDescription>
@@ -842,7 +847,7 @@ export default function LabTestsPage() {
                     value={patientName}
                     onChange={(e) => setPatientName(e.target.value)}
                     placeholder="Enter patient name"
-                    required
+                    disabled={false}
                   />
                 </div>
 
@@ -856,14 +861,14 @@ export default function LabTestsPage() {
                       value={patientAge}
                       onChange={(e) => setPatientAge(e.target.value)}
                       placeholder="Age"
-                      required
                       min="1"
                       max="120"
+                      disabled={false}
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="dialog-patient-gender">Gender *</Label>
-                    <Select value={patientGender} onValueChange={setPatientGender} required>
+                    <Select value={patientGender} onValueChange={setPatientGender}>
                       <SelectTrigger id="dialog-patient-gender">
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
@@ -885,7 +890,7 @@ export default function LabTestsPage() {
                     value={patientPhone}
                     onChange={(e) => setPatientPhone(e.target.value)}
                     placeholder="Enter phone number"
-                    required
+                    disabled={false}
                   />
                 </div>
 
@@ -897,6 +902,7 @@ export default function LabTestsPage() {
                     value={patientDisease}
                     onChange={(e) => setPatientDisease(e.target.value)}
                     placeholder="e.g., Diabetes, Hypertension"
+                    disabled={false}
                   />
                 </div>
 

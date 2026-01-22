@@ -10,6 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { isAuthenticated, clearAuth, getUser } from "@/lib/auth-utils"
 import { getCart } from "@/lib/api/cart"
@@ -37,13 +38,26 @@ export function Navbar() {
   const router = useRouter()
 
   React.useEffect(() => {
-    setAuthenticated(isAuthenticated())
-    setUser(getUser())
+    const authStatus = isAuthenticated()
+    setAuthenticated(authStatus)
+    const userData = getUser()
+    setUser(userData)
     
-    if (isAuthenticated()) {
+    if (authStatus) {
       fetchCartCount()
     }
   }, [pathname])
+
+  // Listen for storage changes to update user data
+  React.useEffect(() => {
+    const handleStorageChange = () => {
+      const userData = getUser()
+      setUser(userData)
+    }
+
+    window.addEventListener("storage", handleStorageChange)
+    return () => window.removeEventListener("storage", handleStorageChange)
+  }, [])
 
   // Debounced search
   React.useEffect(() => {
@@ -357,16 +371,37 @@ export function Navbar() {
               {/* Desktop User Menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="hidden md:inline-flex">
-                    <User className="h-5 w-5" />
+                  <Button variant="ghost" size="icon" className="hidden md:inline-flex rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage 
+                        src={user?.profileImage?.url || user?.profileImage || "/placeholder-user.jpg"} 
+                        alt={user?.name || "User"}
+                        className="object-cover"
+                      />
+                      <AvatarFallback>
+                        {user?.name ? user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "U"}
+                      </AvatarFallback>
+                    </Avatar>
                     <span className="sr-only">Profile</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{user?.name || "User"}</p>
-                      <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage 
+                          src={user?.profileImage?.url || user?.profileImage || "/placeholder-user.jpg"} 
+                          alt={user?.name || "User"}
+                          className="object-cover"
+                        />
+                        <AvatarFallback>
+                          {user?.name ? user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium leading-none">{user?.name || "User"}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                      </div>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -417,9 +452,21 @@ export function Navbar() {
               <nav className="flex flex-col gap-4">
                 {authenticated ? (
                   <>
-                    <div className="flex flex-col space-y-1 pb-4 border-b">
-                      <p className="text-sm font-medium">{user?.name || "User"}</p>
-                      <p className="text-xs text-muted-foreground">{user?.email}</p>
+                    <div className="flex items-center gap-3 pb-4 border-b">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage 
+                          src={user?.profileImage?.url || user?.profileImage || "/placeholder-user.jpg"} 
+                          alt={user?.name || "User"}
+                          className="object-cover"
+                        />
+                        <AvatarFallback>
+                          {user?.name ? user.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2) : "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col space-y-1">
+                        <p className="text-sm font-medium">{user?.name || "User"}</p>
+                        <p className="text-xs text-muted-foreground">{user?.email}</p>
+                      </div>
                     </div>
                     <Link
                       href="/profile"

@@ -152,11 +152,22 @@ export const profileApi = {
       formData.append("profileImage", imageFile)
 
       const response = await fetch(`${API_BASE_URL}/profile/image`, {
-        method: "PUT",
+        method: "POST",
         headers: {
           ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: formData,
+      })
+      return await response.json()
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
+  getProfileImage: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/profile/image`, {
+        headers: getAuthHeaders(),
       })
       return await response.json()
     } catch (error) {

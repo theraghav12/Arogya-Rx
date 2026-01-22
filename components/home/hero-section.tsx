@@ -309,7 +309,7 @@ export function HeroSection() {
           <div className="relative hidden lg:block">
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent/10 rounded-3xl" />
             <img
-              src="/developers.png"
+              src="/public/healthcare-professional-with-medical-equipment.jpg"
               alt="Healthcare Professional"
               className="relative z-10 h-full w-full rounded-3xl object-cover shadow-2xl"
             />

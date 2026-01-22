@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { isAuthenticated } from "@/lib/auth-utils"
+import { isAuthenticated, updateUserProfile } from "@/lib/auth-utils"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -170,11 +170,11 @@ export default function ProfilePage() {
       return
     }
 
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"]
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/jpg"]
     if (!allowedTypes.includes(file.type)) {
       toast({
         title: "Error",
-        description: "Only JPG, PNG, and WebP images are allowed",
+        description: "Only JPG, PNG, GIF, and WebP images are allowed",
         variant: "destructive",
       })
       return
@@ -185,6 +185,7 @@ export default function ProfilePage() {
       const result = await profileApi.uploadProfileImage(file)
       console.log("Image upload result:", result) // Debug log
       if (result.success) {
+        const newProfileImage = result.profileImage || result.user?.profileImage
         toast({
           title: "Success",
           description: "Profile image updated successfully",
@@ -192,14 +193,12 @@ export default function ProfilePage() {
         // Update profile state immediately with new image
         setProfile((prev: any) => ({
           ...prev,
-          profileImage: result.profileImage || result.user?.profileImage,
+          profileImage: newProfileImage,
         }))
-        // Also update localStorage
-        const user = JSON.parse(localStorage.getItem("user") || "{}")
-        user.profileImage = result.profileImage || result.user?.profileImage
-        localStorage.setItem("user", JSON.stringify(user))
-        // Reload full profile
-        await loadProfile()
+        // Update localStorage using helper function
+        updateUserProfile({ profileImage: newProfileImage })
+        // Trigger a page reload event to update navbar
+        window.dispatchEvent(new Event("storage"))
       } else {
         toast({
           title: "Error",
@@ -236,12 +235,10 @@ export default function ProfilePage() {
           ...prev,
           profileImage: null,
         }))
-        // Also update localStorage
-        const user = JSON.parse(localStorage.getItem("user") || "{}")
-        user.profileImage = null
-        localStorage.setItem("user", JSON.stringify(user))
-        // Reload full profile
-        await loadProfile()
+        // Update localStorage using helper function
+        updateUserProfile({ profileImage: null })
+        // Trigger a page reload event to update navbar
+        window.dispatchEvent(new Event("storage"))
       } else {
         toast({
           title: "Error",
@@ -374,7 +371,7 @@ export default function ProfilePage() {
                   <div className="relative">
                     <Avatar className="h-24 w-24">
                       <AvatarImage 
-                        src={profile?.profileImage || "/placeholder-user.jpg"} 
+                        src={profile?.profileImage?.url || profile?.profileImage || "/placeholder-user.jpg"} 
                         alt={profile?.name || "User"}
                         className="object-cover"
                       />
@@ -389,7 +386,7 @@ export default function ProfilePage() {
                       <input
                         id="profile-image"
                         type="file"
-                        accept="image/jpeg,image/png,image/webp"
+                        accept="image/jpeg,image/png,image/webp,image/jpg,image/gif"
                         className="hidden"
                         onChange={handleImageUpload}
                         disabled={updating}
@@ -400,7 +397,7 @@ export default function ProfilePage() {
                   <p className="text-sm text-muted-foreground">{profile?.email}</p>
                   <Badge className="mt-3">Verified Account</Badge>
                   
-                  {profile?.profileImage && profile.profileImage !== "/placeholder-user.jpg" && (
+                  {profile?.profileImage && (
                     <Button
                       variant="outline"
                       size="sm"

@@ -2,6 +2,8 @@ import { API_BASE_URL, getAuthHeaders, handleApiError } from "../api-config"
 
 export interface Medicine {
   _id: string
+  itemID?: string
+  itemCode?: string
   productName: string
   genericName: string
   brandName: string
@@ -12,48 +14,79 @@ export interface Medicine {
     activeIngredients: Array<{
       name: string
       strength: string
-    }>
+    }> | string[]
     inactiveIngredients?: string[]
   }
   dosage: {
     form: string
     strength: string
-    route: string
+    route?: string
     frequency?: string
+    recommendedDosage?: string
   }
   pricing: {
     mrp: number
+    rate?: number
     sellingPrice: number
     discount: number
+    addLess?: number
     gst?: number
   }
   stock: {
+    available?: boolean
     quantity: number
-    unit: string
-    lowStockThreshold: number
+    unit?: string
+    minOrderQuantity?: number
+    maxOrderQuantity?: number
+    lowStockThreshold?: number
     inStock?: boolean
+  }
+  tax?: {
+    hsnCode: string
+    hsnName: string
+    localTax?: number
+    sgst: number
+    cgst: number
+    centralTax?: number
+    igst: number
+    oldTax?: number
+    taxDiff?: number
   }
   packaging: {
     packSize: string
     packType?: string
     expiryDate: string
+    storageInstructions?: string
+  }
+  regulatory?: {
+    drugType?: string
+    drugLicenseNumber?: string
+    scheduleType?: string
+    sideEffects?: string[]
+    warnings?: string[]
+    contraindications?: string[]
+    interactions?: string[]
   }
   images: string[]
   description: string
-  usageInstructions: string
-  sideEffects: string
-  warnings: string
+  usageInstructions?: string
+  sideEffects?: string
+  warnings?: string
   contraindications?: string
   storageConditions?: string
-  regulatory?: {
-    drugLicenseNumber: string
-    scheduleType: string
-  }
   additionalFeatures?: {
+    alternativeMedicines?: any[]
+    userReviews?: any[]
+    faqs?: any[]
+    doctorAdvice?: string
     fastActing?: boolean
     sugarFree?: boolean
     glutenFree?: boolean
   }
+  totalSold?: number
+  totalViews?: number
+  lastSoldAt?: string
+  lastViewedAt?: string
   createdAt: string
   updatedAt: string
 }
