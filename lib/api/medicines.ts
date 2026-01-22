@@ -91,7 +91,59 @@ export interface Medicine {
   updatedAt: string
 }
 
+export interface AlphabetIndexItem {
+  letter: string
+  count: number
+  hasData: boolean
+}
+
+export interface MedicinesResponse {
+  success: boolean
+  count: number
+  totalMedicines: number
+  totalPages: number
+  currentPage: number
+  letter?: string
+  search?: string
+  data: Medicine[]
+}
+
 export const medicinesApi = {
+  // Get alphabet index with counts
+  getAlphabetIndex: async (): Promise<{ success: boolean; data: AlphabetIndexItem[]; totalLetters: number }> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/medicines/alphabet-index`)
+      return await response.json()
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
+  // Get medicines with pagination and filters
+  getMedicines: async (params?: {
+    page?: number
+    limit?: number
+    letter?: string
+    search?: string
+    category?: string
+    prescriptionRequired?: boolean
+  }): Promise<MedicinesResponse> => {
+    try {
+      const queryParams = new URLSearchParams()
+      if (params?.page) queryParams.append('page', params.page.toString())
+      if (params?.limit) queryParams.append('limit', params.limit.toString())
+      if (params?.letter && params.letter !== 'all') queryParams.append('letter', params.letter)
+      if (params?.search) queryParams.append('search', params.search)
+      if (params?.category) queryParams.append('category', params.category)
+      if (params?.prescriptionRequired !== undefined) queryParams.append('prescriptionRequired', params.prescriptionRequired.toString())
+
+      const response = await fetch(`${API_BASE_URL}/medicines?${queryParams.toString()}`)
+      return await response.json()
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
   getAll: async (params?: { category?: string; prescriptionRequired?: boolean }) => {
     try {
       const queryString = new URLSearchParams(params as any).toString()

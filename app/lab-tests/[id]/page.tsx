@@ -529,10 +529,11 @@ export default function LabTestDetailPage() {
                       type="number"
                       value={patientAge}
                       onChange={(e) => setPatientAge(e.target.value)}
-                      placeholder="Age"
+                      placeholder="Enter age"
                       min="1"
                       max="120"
                       disabled={false}
+                      autoComplete="off"
                     />
                   </div>
                   <div className="space-y-2">
