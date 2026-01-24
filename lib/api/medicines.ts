@@ -99,6 +99,7 @@ export interface AlphabetIndexItem {
 
 export interface MedicinesResponse {
   success: boolean
+  message?: string
   count: number
   totalMedicines: number
   totalPages: number
@@ -108,11 +109,142 @@ export interface MedicinesResponse {
   data: Medicine[]
 }
 
+export interface UnifiedSearchResponse {
+  success: boolean
+  message: string
+  query: string
+  stats: {
+    exactNameMatch: number
+    partialNameMatch: number
+    formulaMatch: number
+    genericMatch: number
+  }
+  categorizedResults: {
+    exactNameMatch: Medicine[]
+    partialNameMatch: Medicine[]
+    formulaMatch: Medicine[]
+    genericMatch: Medicine[]
+  }
+  allResults: Medicine[]
+  pagination: {
+    currentPage: number
+    totalPages: number
+    totalResults: number
+    resultsPerPage: number
+    hasNextPage: boolean
+    hasPrevPage: boolean
+  }
+}
+
+export interface FormulaSearchResponse {
+  success: boolean
+  message: string
+  formula: string
+  data: Medicine[]
+  metadata: {
+    totalMedicines: number
+    manufacturers: string[]
+    manufacturerCount: number
+    priceRange: {
+      min: number
+      max: number
+      average: string
+    }
+  }
+  pagination: {
+    currentPage: number
+    totalPages: number
+    totalResults: number
+    resultsPerPage: number
+    hasNextPage: boolean
+    hasPrevPage: boolean
+  }
+}
+
+export interface FormulasListResponse {
+  success: boolean
+  message: string
+  data: Array<{
+    name: string
+    medicineCount: number
+  }>
+  totalFormulas: number
+}
+
 export const medicinesApi = {
   // Get alphabet index with counts
   getAlphabetIndex: async (): Promise<{ success: boolean; data: AlphabetIndexItem[]; totalLetters: number }> => {
     try {
       const response = await fetch(`${API_BASE_URL}/medicines/alphabet-index`)
+      return await response.json()
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
+  // Unified search - Search by name OR formula in single API
+  unifiedSearch: async (params: {
+    query: string
+    page?: number
+    limit?: number
+    sortBy?: string
+    sortOrder?: 'asc' | 'desc'
+    category?: string
+    prescriptionRequired?: boolean
+    inStock?: boolean
+  }): Promise<UnifiedSearchResponse> => {
+    try {
+      const queryParams = new URLSearchParams()
+      queryParams.append('query', params.query)
+      if (params.page) queryParams.append('page', params.page.toString())
+      if (params.limit) queryParams.append('limit', params.limit.toString())
+      if (params.sortBy) queryParams.append('sortBy', params.sortBy)
+      if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder)
+      if (params.category) queryParams.append('category', params.category)
+      if (params.prescriptionRequired !== undefined) queryParams.append('prescriptionRequired', params.prescriptionRequired.toString())
+      if (params.inStock !== undefined) queryParams.append('inStock', params.inStock.toString())
+
+      const response = await fetch(`${API_BASE_URL}/medicines/search/unified?${queryParams.toString()}`)
+      return await response.json()
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
+  // Search by formula/salt
+  searchByFormula: async (params: {
+    formula: string
+    page?: number
+    limit?: number
+    sortBy?: string
+    sortOrder?: 'asc' | 'desc'
+  }): Promise<FormulaSearchResponse> => {
+    try {
+      const queryParams = new URLSearchParams()
+      queryParams.append('formula', params.formula)
+      if (params.page) queryParams.append('page', params.page.toString())
+      if (params.limit) queryParams.append('limit', params.limit.toString())
+      if (params.sortBy) queryParams.append('sortBy', params.sortBy)
+      if (params.sortOrder) queryParams.append('sortOrder', params.sortOrder)
+
+      const response = await fetch(`${API_BASE_URL}/medicines/search/by-formula?${queryParams.toString()}`)
+      return await response.json()
+    } catch (error) {
+      return handleApiError(error)
+    }
+  },
+
+  // Get all available formulas/salts
+  getFormulas: async (params?: {
+    search?: string
+    limit?: number
+  }): Promise<FormulasListResponse> => {
+    try {
+      const queryParams = new URLSearchParams()
+      if (params?.search) queryParams.append('search', params.search)
+      if (params?.limit) queryParams.append('limit', params.limit.toString())
+
+      const response = await fetch(`${API_BASE_URL}/medicines/search/formulas?${queryParams.toString()}`)
       return await response.json()
     } catch (error) {
       return handleApiError(error)

@@ -456,11 +456,12 @@ export default function MedicineDetailPage() {
           {/* Detailed Information Tabs */}
           <div className="mt-12">
             <Tabs defaultValue="description" className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="description">Description</TabsTrigger>
                 <TabsTrigger value="composition">Composition</TabsTrigger>
                 <TabsTrigger value="usage">Usage</TabsTrigger>
                 <TabsTrigger value="warnings">Warnings</TabsTrigger>
+                <TabsTrigger value="pricing">Pricing</TabsTrigger>
                 <TabsTrigger value="storage">Storage</TabsTrigger>
               </TabsList>
 
@@ -469,6 +470,20 @@ export default function MedicineDetailPage() {
                   <CardContent className="p-6">
                     <h3 className="mb-4 text-lg font-semibold">About {medicine.productName}</h3>
                     <p className="text-muted-foreground leading-relaxed">{medicine.description}</p>
+
+                    {medicine.additionalFeatures?.doctorAdvice && (
+                      <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950 p-4">
+                        <div className="flex gap-3">
+                          <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                          <div>
+                            <h4 className="font-medium text-blue-900 dark:text-blue-100">Doctor's Advice</h4>
+                            <p className="mt-2 text-sm text-blue-800 dark:text-blue-200 leading-relaxed">
+                              {medicine.additionalFeatures.doctorAdvice}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {medicine.additionalFeatures && (
                       <div className="mt-6">
@@ -480,6 +495,33 @@ export default function MedicineDetailPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Product Details */}
+                    <div className="mt-6 space-y-3">
+                      <h4 className="mb-3 font-medium">Product Details</h4>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {medicine.itemID && (
+                          <div className="rounded-lg border p-3">
+                            <p className="text-sm text-muted-foreground">Item ID</p>
+                            <p className="font-medium">{medicine.itemID}</p>
+                          </div>
+                        )}
+                        {medicine.itemCode && (
+                          <div className="rounded-lg border p-3">
+                            <p className="text-sm text-muted-foreground">Item Code</p>
+                            <p className="font-medium">{medicine.itemCode}</p>
+                          </div>
+                        )}
+                        <div className="rounded-lg border p-3">
+                          <p className="text-sm text-muted-foreground">Category</p>
+                          <p className="font-medium">{medicine.category}</p>
+                        </div>
+                        <div className="rounded-lg border p-3">
+                          <p className="text-sm text-muted-foreground">Generic Name</p>
+                          <p className="font-medium">{medicine.genericName}</p>
+                        </div>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -642,6 +684,123 @@ export default function MedicineDetailPage() {
                 </Card>
               </TabsContent>
 
+              <TabsContent value="pricing" className="mt-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="mb-4 text-lg font-semibold">Pricing Details</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="mb-3 font-medium">Price Breakdown</h4>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-lg border p-4">
+                            <p className="text-sm text-muted-foreground">MRP (Maximum Retail Price)</p>
+                            <p className="text-2xl font-bold">₹{medicine.pricing.mrp.toFixed(2)}</p>
+                          </div>
+                          <div className="rounded-lg border p-4 bg-primary/5">
+                            <p className="text-sm text-muted-foreground">Selling Price</p>
+                            <p className="text-2xl font-bold text-primary">₹{medicine.pricing.sellingPrice.toFixed(2)}</p>
+                          </div>
+                          {medicine.pricing.discount > 0 && (
+                            <div className="rounded-lg border p-4">
+                              <p className="text-sm text-muted-foreground">Discount</p>
+                              <p className="text-2xl font-bold text-green-600">{medicine.pricing.discount}%</p>
+                            </div>
+                          )}
+                          {medicine.pricing.discount > 0 && (
+                            <div className="rounded-lg border p-4">
+                              <p className="text-sm text-muted-foreground">You Save</p>
+                              <p className="text-2xl font-bold text-green-600">
+                                ₹{(medicine.pricing.mrp - medicine.pricing.sellingPrice).toFixed(2)}
+                              </p>
+                            </div>
+                          )}
+                          {medicine.pricing.rate !== undefined && medicine.pricing.rate > 0 && (
+                            <div className="rounded-lg border p-4">
+                              <p className="text-sm text-muted-foreground">Rate</p>
+                              <p className="text-xl font-bold">₹{medicine.pricing.rate.toFixed(2)}</p>
+                            </div>
+                          )}
+                          {medicine.pricing.addLess !== undefined && medicine.pricing.addLess !== 0 && (
+                            <div className="rounded-lg border p-4">
+                              <p className="text-sm text-muted-foreground">Add/Less</p>
+                              <p className="text-xl font-bold">₹{medicine.pricing.addLess.toFixed(2)}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {medicine.tax && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h4 className="mb-3 font-medium">Tax Information</h4>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              {medicine.tax.hsnCode && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">HSN Code</p>
+                                  <p className="font-medium">{medicine.tax.hsnCode}</p>
+                                </div>
+                              )}
+                              {medicine.tax.hsnName && medicine.tax.hsnName !== 'N/A' && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">HSN Name</p>
+                                  <p className="font-medium">{medicine.tax.hsnName}</p>
+                                </div>
+                              )}
+                              <div className="rounded-lg border p-3">
+                                <p className="text-sm text-muted-foreground">SGST (State GST)</p>
+                                <p className="font-medium">{medicine.tax.sgst}%</p>
+                              </div>
+                              <div className="rounded-lg border p-3">
+                                <p className="text-sm text-muted-foreground">CGST (Central GST)</p>
+                                <p className="font-medium">{medicine.tax.cgst}%</p>
+                              </div>
+                              <div className="rounded-lg border p-3">
+                                <p className="text-sm text-muted-foreground">IGST (Integrated GST)</p>
+                                <p className="font-medium">{medicine.tax.igst}%</p>
+                              </div>
+                              <div className="rounded-lg border p-3 bg-muted/50">
+                                <p className="text-sm text-muted-foreground">Total GST</p>
+                                <p className="font-medium">{medicine.tax.sgst + medicine.tax.cgst}%</p>
+                              </div>
+                              {medicine.tax.localTax !== undefined && medicine.tax.localTax > 0 && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">Local Tax</p>
+                                  <p className="font-medium">{medicine.tax.localTax}%</p>
+                                </div>
+                              )}
+                              {medicine.tax.centralTax !== undefined && medicine.tax.centralTax > 0 && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">Central Tax</p>
+                                  <p className="font-medium">{medicine.tax.centralTax}%</p>
+                                </div>
+                              )}
+                              {medicine.tax.oldTax !== undefined && medicine.tax.oldTax > 0 && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">Old Tax</p>
+                                  <p className="font-medium">{medicine.tax.oldTax}%</p>
+                                </div>
+                              )}
+                              {medicine.tax.taxDiff !== undefined && medicine.tax.taxDiff !== 0 && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">Tax Difference</p>
+                                  <p className="font-medium">{medicine.tax.taxDiff}%</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      <Separator />
+                      <div className="rounded-lg bg-muted/30 p-4">
+                        <p className="text-sm text-muted-foreground">Note: All prices are inclusive of applicable taxes</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               <TabsContent value="storage" className="mt-6">
                 <Card>
                   <CardContent className="p-6">
@@ -671,10 +830,12 @@ export default function MedicineDetailPage() {
                               <p className="font-medium">{medicine.packaging.packType}</p>
                             </div>
                           )}
-                          <div className="rounded-lg border p-3">
-                            <p className="text-sm text-muted-foreground">Expiry Date</p>
-                            <p className="font-medium">{format(new Date(medicine.packaging.expiryDate), "PPP")}</p>
-                          </div>
+                          {medicine.packaging.expiryDate && (
+                            <div className="rounded-lg border p-3">
+                              <p className="text-sm text-muted-foreground">Expiry Date</p>
+                              <p className="font-medium">{format(new Date(medicine.packaging.expiryDate), "PPP")}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -700,6 +861,70 @@ export default function MedicineDetailPage() {
                                 <div className="rounded-lg border p-3">
                                   <p className="text-sm text-muted-foreground">Schedule Type</p>
                                   <p className="font-medium">{medicine.regulatory.scheduleType}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Tax Information */}
+                      {medicine.tax && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h4 className="mb-2 font-medium">Tax Information</h4>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              {medicine.tax.hsnCode && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">HSN Code</p>
+                                  <p className="font-medium">{medicine.tax.hsnCode}</p>
+                                </div>
+                              )}
+                              <div className="rounded-lg border p-3">
+                                <p className="text-sm text-muted-foreground">SGST</p>
+                                <p className="font-medium">{medicine.tax.sgst}%</p>
+                              </div>
+                              <div className="rounded-lg border p-3">
+                                <p className="text-sm text-muted-foreground">CGST</p>
+                                <p className="font-medium">{medicine.tax.cgst}%</p>
+                              </div>
+                              <div className="rounded-lg border p-3">
+                                <p className="text-sm text-muted-foreground">IGST</p>
+                                <p className="font-medium">{medicine.tax.igst}%</p>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Stock Information */}
+                      <Separator />
+                      <div>
+                        <h4 className="mb-2 font-medium">Stock Information</h4>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-lg border p-3">
+                            <p className="text-sm text-muted-foreground">Available Quantity</p>
+                            <p className="font-medium">{stockQuantity} {medicine.stock.unit || 'units'}</p>
+                          </div>
+                          {medicine.stock.minOrderQuantity && (
+                            <div className="rounded-lg border p-3">
+                              <p className="text-sm text-muted-foreground">Min Order Quantity</p>
+                              <p className="font-medium">{medicine.stock.minOrderQuantity}</p>
+                            </div>
+                          )}
+                          {medicine.stock.maxOrderQuantity && (
+                            <div className="rounded-lg border p-3">
+                              <p className="text-sm text-muted-foreground">Max Order Quantity</p>
+                              <p className="font-medium">{medicine.stock.maxOrderQuantity}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>/p>
                                 </div>
                               )}
                             </div>

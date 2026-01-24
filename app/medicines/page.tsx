@@ -22,6 +22,7 @@ export default function MedicinesPage() {
   const router = useRouter()
   const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid")
   const [searchQuery, setSearchQuery] = React.useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState("")
   const [medicines, setMedicines] = React.useState<Medicine[]>([])
   const [loading, setLoading] = React.useState(true)
   const [selectedCategories, setSelectedCategories] = React.useState<string[]>([])
@@ -37,6 +38,15 @@ export default function MedicinesPage() {
 
   const categories = ["Pain Relief", "Antibiotics", "Vitamins", "Allergy", "Digestive", "Diabetes", "Cardiac", "Respiratory"]
 
+  // Debounce search query
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery)
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
   React.useEffect(() => {
     loadAlphabetIndex()
   }, [])
@@ -44,7 +54,7 @@ export default function MedicinesPage() {
   React.useEffect(() => {
     loadMedicines()
     loadCartItems()
-  }, [selectedLetter, currentPage, searchQuery, selectedCategories, prescriptionFilter])
+  }, [selectedLetter, currentPage, debouncedSearchQuery, selectedCategories, prescriptionFilter])
 
   const loadAlphabetIndex = async () => {
     try {
@@ -81,12 +91,14 @@ export default function MedicinesPage() {
         limit: itemsPerPage,
       }
 
-      if (selectedLetter !== "all") {
+      // When searching, don't apply letter filter
+      if (selectedLetter !== "all" && !debouncedSearchQuery.trim()) {
         params.letter = selectedLetter
       }
 
-      if (searchQuery.trim()) {
-        params.search = searchQuery.trim()
+      if (debouncedSearchQuery.trim()) {
+        params.search = debouncedSearchQuery.trim()
+        console.log("🔍 Searching for:", debouncedSearchQuery.trim())
       }
 
       if (selectedCategories.length > 0) {
@@ -99,35 +111,51 @@ export default function MedicinesPage() {
         params.prescriptionRequired = true
       }
 
+      console.log("=== MEDICINES API REQUEST ===")
+      console.log("API URL:", `${process.env.NEXT_PUBLIC_API_BASE_URL}/medicines`)
+      console.log("Params:", params)
+      console.log("Query String:", new URLSearchParams(params).toString())
+      console.log("============================")
+
       const response = await medicinesApi.getMedicines(params)
       
       console.log("=== MEDICINES API RESPONSE ===")
-      console.log("Full Response:", response)
+      console.log("Success:", response.success)
       console.log("Medicines Count:", response.data?.length)
       console.log("Total Medicines:", response.totalMedicines)
       console.log("Total Pages:", response.totalPages)
       console.log("Current Page:", response.currentPage)
-      console.log("Params sent:", params)
+      console.log("Search Query:", response.search)
       console.log("==============================")
       
       if (response.success) {
-        // IMPORTANT: Always replace, never append
         const newMedicines = response.data || []
-        console.log("Setting medicines array with length:", newMedicines.length)
         setMedicines(newMedicines)
         setTotalPages(response.totalPages || 1)
         setTotalMedicines(response.totalMedicines || newMedicines.length)
+        
+        if (debouncedSearchQuery.trim() && newMedicines.length === 0) {
+          toast({
+            title: "No results found",
+            description: `No medicines found for "${debouncedSearchQuery}"`,
+          })
+        }
       } else {
-        console.log("API returned success: false, clearing medicines")
+        console.log("API returned success: false")
         setMedicines([])
         setTotalPages(1)
         setTotalMedicines(0)
+        toast({
+          title: "Error",
+          description: response.message || "Failed to load medicines",
+          variant: "destructive",
+        })
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load medicines:", error)
       toast({
         title: "Error",
-        description: "Failed to load medicines",
+        description: error.message || "Failed to load medicines",
         variant: "destructive",
       })
       setMedicines([])
@@ -140,6 +168,7 @@ export default function MedicinesPage() {
     setSelectedLetter(letter)
     setCurrentPage(1)
     setSearchQuery("")
+    setDebouncedSearchQuery("")
   }
 
   const handlePageChange = (page: number) => {
@@ -250,6 +279,7 @@ export default function MedicinesPage() {
     setSelectedCategories([])
     setPrescriptionFilter("")
     setSearchQuery("")
+    setDebouncedSearchQuery("")
     setSelectedLetter("all")
     setCurrentPage(1)
   }
@@ -358,19 +388,22 @@ export default function MedicinesPage() {
         </div>
       </div>
 
-      {(selectedLetter !== "all" || searchQuery || selectedCategories.length > 0 || prescriptionFilter) && (
+      {(selectedLetter !== "all" || debouncedSearchQuery || selectedCategories.length > 0 || prescriptionFilter) && (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">Active filters:</span>
-          {selectedLetter !== "all" && (
+          {selectedLetter !== "all" && !debouncedSearchQuery && (
             <Badge variant="secondary" className="gap-1">
               Letter: {selectedLetter}
               <X className="h-3 w-3 cursor-pointer" onClick={() => handleLetterClick("all")} />
             </Badge>
           )}
-          {searchQuery && (
+          {debouncedSearchQuery && (
             <Badge variant="secondary" className="gap-1">
-              Search: {searchQuery}
-              <X className="h-3 w-3 cursor-pointer" onClick={() => setSearchQuery("")} />
+              Search: {debouncedSearchQuery}
+              <X className="h-3 w-3 cursor-pointer" onClick={() => {
+                setSearchQuery("")
+                setDebouncedSearchQuery("")
+              }} />
             </Badge>
           )}
           {selectedCategories.map((cat) => (
@@ -395,7 +428,7 @@ export default function MedicinesPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder={`Search ${selectedLetter !== "all" ? `in ${selectedLetter} medicines` : "all medicines"}...`}
+            placeholder={`Search ${selectedLetter !== "all" && !searchQuery ? `in ${selectedLetter} medicines` : "all medicines"}...`}
             className="pl-9"
             value={searchQuery}
             onChange={(e) => {
@@ -403,6 +436,9 @@ export default function MedicinesPage() {
               setCurrentPage(1)
             }}
           />
+          {loading && debouncedSearchQuery && (
+            <Loader2 className="absolute right-3 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />
+          )}
         </div>
 
         <div className="flex items-center gap-2">
