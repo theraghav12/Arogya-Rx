@@ -924,7 +924,68 @@ export default function MedicineDetailPage() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>/p>
+              </TabsContent>
+
+              <TabsContent value="storage" className="mt-6">
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="mb-4 text-lg font-semibold">Storage & Handling</h3>
+                    <div className="space-y-4">
+                      {(medicine.storageConditions || medicine.packaging.storageInstructions) && (
+                        <div>
+                          <h4 className="mb-2 font-medium">Storage Conditions</h4>
+                          <p className="text-muted-foreground leading-relaxed">
+                            {medicine.storageConditions || medicine.packaging.storageInstructions}
+                          </p>
+                        </div>
+                      )}
+
+                      <Separator />
+
+                      <div>
+                        <h4 className="mb-2 font-medium">Packaging Information</h4>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-lg border p-3">
+                            <p className="text-sm text-muted-foreground">Pack Size</p>
+                            <p className="font-medium">{medicine.packaging.packSize}</p>
+                          </div>
+                          {medicine.packaging.packType && (
+                            <div className="rounded-lg border p-3">
+                              <p className="text-sm text-muted-foreground">Pack Type</p>
+                              <p className="font-medium">{medicine.packaging.packType}</p>
+                            </div>
+                          )}
+                          {medicine.packaging.expiryDate && (
+                            <div className="rounded-lg border p-3">
+                              <p className="text-sm text-muted-foreground">Expiry Date</p>
+                              <p className="font-medium">{format(new Date(medicine.packaging.expiryDate), "PPP")}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {(medicine.regulatory?.drugType || medicine.regulatory?.drugLicenseNumber || medicine.regulatory?.scheduleType) && (
+                        <>
+                          <Separator />
+                          <div>
+                            <h4 className="mb-2 font-medium">Regulatory Information</h4>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              {medicine.regulatory.drugType && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">Drug Type</p>
+                                  <p className="font-medium">{medicine.regulatory.drugType}</p>
+                                </div>
+                              )}
+                              {medicine.regulatory.drugLicenseNumber && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">Drug License Number</p>
+                                  <p className="font-medium">{medicine.regulatory.drugLicenseNumber}</p>
+                                </div>
+                              )}
+                              {medicine.regulatory.scheduleType && (
+                                <div className="rounded-lg border p-3">
+                                  <p className="text-sm text-muted-foreground">Schedule Type</p>
+                                  <p className="font-medium">{medicine.regulatory.scheduleType}</p>
                                 </div>
                               )}
                             </div>
