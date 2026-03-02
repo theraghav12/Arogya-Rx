@@ -26,19 +26,26 @@ export default function BookLabTestPage() {
   const router = useRouter()
   const { toast } = useToast()
   const user = getUser()
-
+  
   const [test, setTest] = useState<LabTest | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
-  // Form state
+  // Initialize form state with user data
+  const getUserFullName = () => {
+    if (!user) return ""
+    return user.firstName && user.lastName 
+      ? `${user.firstName} ${user.lastName}`.trim() 
+      : user.name || ""
+  }
+
+  // Form state - initialize with user data
   const [bookingFor, setBookingFor] = useState<"self" | "other">("self")
-  const [patientName, setPatientName] = useState(user?.name || "")
-  const [patientAge, setPatientAge] = useState("")
-  const [patientGender, setPatientGender] = useState("")
-  const [contactPhone, setContactPhone] = useState(user?.contact || "")
+  const [patientName, setPatientName] = useState(getUserFullName())
+  const [patientAge, setPatientAge] = useState(user?.age?.toString() || "")
+  const [patientGender, setPatientGender] = useState(user?.gender || "")
+  const [contactPhone, setContactPhone] = useState(user?.contact || user?.phone || "")
   const [contactEmail, setContactEmail] = useState(user?.email || "")
-  const [address, setAddress] = useState("")
   const [homeCollection, setHomeCollection] = useState(true)
   const [preferredDate, setPreferredDate] = useState<Date>()
   const [preferredSlot, setPreferredSlot] = useState("")
@@ -49,17 +56,27 @@ export default function BookLabTestPage() {
     }
   }, [params.id])
 
+  // Handle switching between "Myself" and "Someone Else"
   useEffect(() => {
     if (bookingFor === "self" && user) {
-      setPatientName(user.name || "")
-      setContactPhone(user.contact || "")
+      const fullName = user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}`.trim() 
+        : user.name || ""
+      
+      setPatientName(fullName)
+      setPatientAge(user.age?.toString() || "")
+      setPatientGender(user.gender || "")
+      setContactPhone(user.contact || user.phone || "")
       setContactEmail(user.email || "")
     } else if (bookingFor === "other") {
+      // Clear all fields for someone else
       setPatientName("")
       setPatientAge("")
       setPatientGender("")
+      setContactPhone("")
+      setContactEmail("")
     }
-  }, [bookingFor, user])
+  }, [bookingFor])
 
   const loadTest = async (id: string) => {
     setLoading(true)
@@ -104,10 +121,10 @@ export default function BookLabTestPage() {
     if (!test) return
 
     // Validation
-    if (!patientName || !patientAge || !patientGender || !contactPhone || !address) {
+    if (!patientName || !patientAge || !patientGender || !contactPhone) {
       toast({
         title: "Validation Error",
-        description: "Please fill all required fields",
+        description: "Please fill all required patient and contact fields",
         variant: "destructive",
       })
       return
@@ -125,35 +142,39 @@ export default function BookLabTestPage() {
     setSubmitting(true)
 
     try {
+      const { addToCart } = await import("@/lib/api/cart")
+      
       const [startTime, endTime] = preferredSlot.split("-")
 
-      const orderData = {
-        tests: [{ labTestId: test._id }],
-        patientName,
-        patientAge: parseInt(patientAge),
-        patientGender,
-        contactPhone,
-        contactEmail: contactEmail || undefined,
-        address,
-        homeCollection,
-        preferredDate: preferredDate ? format(preferredDate, "yyyy-MM-dd") : undefined,
+      // Add to cart with patient details
+      const result = await addToCart({
+        labTestId: test._id,
+        quantity: 1,
+        isHomeCollection: homeCollection,
+        preferredDate: preferredDate ? preferredDate.toISOString() : undefined,
         preferredSlot: preferredSlot ? { start: startTime, end: endTime } : undefined,
-        payment: { method: "online" },
-      }
+        labTestPatientDetails: {
+          name: patientName,
+          phone: contactPhone,
+          gender: patientGender,
+          age: parseInt(patientAge),
+          disease: undefined,
+        },
+      })
 
-      const result = await createLabTestOrder(orderData)
-
-      if (result.success) {
+      if (result.message) {
         toast({
           title: "Success",
-          description: "Lab test booked successfully!",
+          description: "Lab test added to cart successfully!",
         })
-        router.push("/orders")
+        
+        // Redirect to cart page
+        router.push("/cart")
       }
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to book lab test",
+        description: error.message || "Failed to add lab test to cart",
         variant: "destructive",
       })
     } finally {
@@ -177,7 +198,7 @@ export default function BookLabTestPage() {
   }
 
   return (
-    <div className="container px-4 py-8 md:px-6 max-w-4xl">
+    <div className="container px-4 py-8 md:px-6 max-w-7xl mx-auto">
       <Button variant="ghost" className="mb-4 -ml-4" onClick={() => router.back()}>
         <ChevronLeft className="mr-2 h-4 w-4" />
         Back
@@ -279,12 +300,12 @@ export default function BookLabTestPage() {
               </CardContent>
             </Card>
 
-            {/* Contact Details */}
+            {/* Contact & Address Details */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Phone className="h-5 w-5" />
-                  Contact Details
+                  Contact & Address Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -310,17 +331,6 @@ export default function BookLabTestPage() {
                       placeholder="Enter email"
                     />
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address *</Label>
-                  <Input
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    placeholder="Enter full address"
-                    required
-                  />
                 </div>
               </CardContent>
             </Card>
@@ -403,10 +413,10 @@ export default function BookLabTestPage() {
               {submitting ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Booking...
+                  Adding to Cart...
                 </>
               ) : (
-                `Book Test - ₹${calculateTotal()}`
+                `Add to Cart - ₹${calculateTotal()}`
               )}
             </Button>
           </form>

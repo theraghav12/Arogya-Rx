@@ -60,6 +60,20 @@ export default function LabTestDetailPage() {
   
   const user = getUser()
 
+  // Auto-fill user data when component mounts or user changes
+  React.useEffect(() => {
+    if (user && bookingFor === "self") {
+      const fullName = user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}`.trim() 
+        : user.name || ""
+      
+      setPatientName(fullName)
+      setPatientAge(user.age?.toString() || "")
+      setPatientGender(user.gender || "")
+      setPatientPhone(user.contact || user.phone || "")
+    }
+  }, [user, bookingFor])
+
   React.useEffect(() => {
     if (params.id) {
       loadTest(params.id as string)
@@ -97,12 +111,19 @@ export default function LabTestDetailPage() {
       return
     }
 
+    // Reset to "self" and auto-fill user data
     setBookingFor("self")
-    setPatientName(user?.name || "")
-    setPatientAge("")
-    setPatientGender("")
-    setPatientPhone(user?.contact || "")
+    
+    const fullName = user?.firstName && user?.lastName 
+      ? `${user.firstName} ${user.lastName}`.trim() 
+      : user?.name || ""
+    
+    setPatientName(fullName)
+    setPatientAge(user?.age?.toString() || "")
+    setPatientGender(user?.gender || "")
+    setPatientPhone(user?.contact || user?.phone || "")
     setPatientDisease("")
+    
     setShowPatientDialog(true)
   }
 
@@ -111,10 +132,14 @@ export default function LabTestDetailPage() {
     
     if (value === "self") {
       // Pre-fill with user data
-      setPatientName(user?.name || "")
-      setPatientPhone(user?.contact || "")
-      setPatientAge("")
-      setPatientGender("")
+      const fullName = user?.firstName && user?.lastName 
+        ? `${user.firstName} ${user.lastName}`.trim() 
+        : user?.name || ""
+      
+      setPatientName(fullName)
+      setPatientAge(user?.age?.toString() || "")
+      setPatientGender(user?.gender || "")
+      setPatientPhone(user?.contact || user?.phone || "")
       setPatientDisease("")
     } else {
       // Clear all fields for someone else
@@ -466,25 +491,6 @@ export default function LabTestDetailPage() {
                       <Calendar className="mr-2 h-5 w-5" />
                       Book Now
                     </Button>
-
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      size="lg"
-                      onClick={openPatientDialog}
-                    >
-                      <ShoppingCart className="mr-2 h-5 w-5" />
-                      Add to Cart
-                    </Button>
-
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="icon" className="flex-1">
-                        <Heart className="h-5 w-5" />
-                      </Button>
-                      <Button variant="outline" size="icon" className="flex-1">
-                        <Share2 className="h-5 w-5" />
-                      </Button>
-                    </div>
                   </div>
 
                   {/* Additional Info */}
@@ -503,7 +509,7 @@ export default function LabTestDetailPage() {
           <Dialog open={showPatientDialog} onOpenChange={(open) => {
             setShowPatientDialog(open)
           }}>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => e.preventDefault()}>
+            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Patient Details</DialogTitle>
                 <DialogDescription>
@@ -537,7 +543,6 @@ export default function LabTestDetailPage() {
                     value={patientName}
                     onChange={(e) => setPatientName(e.target.value)}
                     placeholder="Enter patient name"
-                    disabled={false}
                   />
                 </div>
 
@@ -553,7 +558,6 @@ export default function LabTestDetailPage() {
                       placeholder="Enter age"
                       min="1"
                       max="120"
-                      disabled={false}
                       autoComplete="off"
                     />
                   </div>
@@ -581,7 +585,6 @@ export default function LabTestDetailPage() {
                     value={patientPhone}
                     onChange={(e) => setPatientPhone(e.target.value)}
                     placeholder="Enter phone number"
-                    disabled={false}
                   />
                 </div>
 
@@ -593,7 +596,6 @@ export default function LabTestDetailPage() {
                     value={patientDisease}
                     onChange={(e) => setPatientDisease(e.target.value)}
                     placeholder="e.g., Diabetes, Hypertension"
-                    disabled={false}
                   />
                 </div>
 

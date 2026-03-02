@@ -336,31 +336,59 @@ export default function OrderDetailPage() {
                           </div>
 
                           {/* Lab Test Details */}
-                          {item.productType === 'labTest' && item.labTestPatientDetails && (
-                            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-1 text-sm">
-                              <div className="flex items-center gap-2">
-                                <User className="h-4 w-4 text-blue-600" />
-                                <span className="font-medium">Patient: {item.labTestPatientDetails.name}</span>
-                              </div>
-                              <div className="flex items-center gap-2 text-muted-foreground">
-                                <span>{item.labTestPatientDetails.gender}, {item.labTestPatientDetails.age} years</span>
-                              </div>
-                              {item.labTestPatientDetails.phone && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <Phone className="h-3 w-3" />
-                                  <span>{item.labTestPatientDetails.phone}</span>
+                          {item.productType === 'labTest' && (
+                            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+                              {item.labTestPatientDetails ? (
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex items-center gap-2 font-semibold text-blue-900 dark:text-blue-100">
+                                    <User className="h-4 w-4" />
+                                    <span>Patient Details</span>
+                                  </div>
+                                  <div className="pl-6 space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-muted-foreground">Name:</span>
+                                      <span className="font-medium">{item.labTestPatientDetails.name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-muted-foreground">Age & Gender:</span>
+                                      <span className="font-medium">
+                                        {item.labTestPatientDetails.age} years, {item.labTestPatientDetails.gender}
+                                      </span>
+                                    </div>
+                                    {item.labTestPatientDetails.phone && (
+                                      <div className="flex items-center gap-2">
+                                        <Phone className="h-3 w-3 text-muted-foreground" />
+                                        <span className="font-medium">{item.labTestPatientDetails.phone}</span>
+                                      </div>
+                                    )}
+                                    {item.labTestPatientDetails.disease && (
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-muted-foreground">Condition:</span>
+                                        <span className="font-medium">{item.labTestPatientDetails.disease}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {item.labTestSampleOTP && (
+                                    <div className="mt-2 pt-2 border-t border-blue-200 dark:border-blue-800">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-muted-foreground">Sample OTP:</span>
+                                        <span className="font-bold text-lg text-blue-600 dark:text-blue-400">
+                                          {item.labTestSampleOTP}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {item.labTestStatus && (
+                                    <div className="mt-2">
+                                      <Badge variant="outline" className="text-xs">
+                                        Status: {item.labTestStatus}
+                                      </Badge>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                              {item.labTestSampleOTP && (
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <span>Sample OTP: <strong>{item.labTestSampleOTP}</strong></span>
-                                </div>
-                              )}
-                              {item.labTestStatus && (
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className="text-xs">
-                                    Status: {item.labTestStatus}
-                                  </Badge>
+                              ) : (
+                                <div className="text-sm text-muted-foreground">
+                                  No patient details available
                                 </div>
                               )}
                             </div>

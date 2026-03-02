@@ -85,12 +85,24 @@ export default function OrdersPage() {
   };
 
   const formatPaymentMethod = (method: string) => {
+    if (!method) return 'Not Available';
+    
     // If method already contains details (e.g., "UPI (user@paytm)"), return as is
-    if (method && (method.includes('(') || method.includes('*'))) {
+    if (method.includes('(') || method.includes('*')) {
       return method;
     }
-    // Otherwise return the basic method
-    return method || 'N/A';
+    
+    // Format common payment methods
+    const methodMap: Record<string, string> = {
+      'online': 'Online Payment',
+      'cod': 'Cash on Delivery',
+      'upi': 'UPI',
+      'card': 'Card Payment',
+      'netbanking': 'Net Banking',
+      'wallet': 'Wallet',
+    };
+    
+    return methodMap[method.toLowerCase()] || method;
   };
 
   const filterOrdersByStatus = (status: string) => {

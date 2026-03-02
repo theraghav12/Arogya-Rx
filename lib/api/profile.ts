@@ -148,7 +148,7 @@ export const profileApi = {
 
   uploadProfileImage: async (imageFile: File) => {
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("authToken") : null
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null
       const formData = new FormData()
       formData.append("profileImage", imageFile)
 

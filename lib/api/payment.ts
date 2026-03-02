@@ -3,7 +3,7 @@ import { API_BASE_URL } from '../api-config';
 // Helper function to get auth token
 const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem('authToken');
+  return localStorage.getItem('token');
 };
 
 export interface CreateOrderPaymentRequest {

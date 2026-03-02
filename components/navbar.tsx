@@ -89,7 +89,7 @@ export function Navbar() {
       } finally {
         setSearchLoading(false)
       }
-    }, 300)
+    }, 100)
 
     return () => clearTimeout(searchTimeout)
   }, [searchQuery])

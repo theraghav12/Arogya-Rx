@@ -517,7 +517,7 @@ export async function getLabTestResults(page = 1, limit = 10, status?: string): 
 // ============================================================================
 
 /**
- * Create lab test order
+ * Create lab test order (Book directly without cart)
  */
 export async function createLabTestOrder(data: {
   tests: Array<{ labTestId: string }>;
@@ -526,7 +526,14 @@ export async function createLabTestOrder(data: {
   patientGender: string;
   contactPhone: string;
   contactEmail?: string;
-  address: string;
+  address: {
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    pincode: string;
+    landmark?: string;
+  };
   homeCollection?: boolean;
   preferredDate?: string;
   preferredSlot?: { start: string; end: string };
@@ -539,7 +546,8 @@ export async function createLabTestOrder(data: {
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(`${API_BASE_URL}/lab-test-orders`, {
+  // Try the documented endpoint first
+  let response = await fetch(`${API_BASE_URL}/lab-test-orders`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -548,10 +556,22 @@ export async function createLabTestOrder(data: {
     body: JSON.stringify(data),
   });
 
+  // If 404, try alternative endpoint
+  if (response.status === 404) {
+    response = await fetch(`${API_BASE_URL}/orders/lab-test`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  }
+
   const result = await response.json();
 
   if (!response.ok) {
-    throw new Error(result.message || 'Failed to create lab test order');
+    throw new Error(result.message || result.error || 'Failed to create lab test order');
   }
 
   return result;
