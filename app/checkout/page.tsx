@@ -37,6 +37,7 @@ export default function CheckoutPage() {
   });
   const [useCustomAddress, setUseCustomAddress] = useState(false);
   const [contact, setContact] = useState('');
+  const [name, setName] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'COD' | 'Online'>('COD');
   const [prescriptionStatus, setPrescriptionStatus] = useState<any>(null);
   const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
@@ -98,6 +99,7 @@ export default function CheckoutPage() {
       
       setAddresses(addressList);
       setContact(profileData.contact || profileData.user?.contact || profileData.phone || profileData.user?.phone || '');
+      setName(profileData.name || profileData.user?.name || '');
 
       if (addressList.length > 0) {
         const defaultAddr = addressList.find((a: any) => a.isDefault);
@@ -207,6 +209,15 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!name.trim()) {
+      toast({
+        title: 'Name Required',
+        description: 'Please enter your name',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Check if prescription is required but not uploaded
     if (prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && !prescriptionFile) {
       toast({
@@ -287,6 +298,7 @@ export default function CheckoutPage() {
             cartId,
             address: addressString,
             contact,
+            name,
           });
 
           // Create Razorpay payment order
@@ -294,6 +306,7 @@ export default function CheckoutPage() {
             cartId,
             address: addressString,
             contact,
+            name,
           });
 
           console.log('Payment order created successfully:', paymentData);
@@ -304,7 +317,7 @@ export default function CheckoutPage() {
           await initiateRazorpayPayment(
             paymentData,
             {
-              name: user?.name || 'User',
+              name: name || user?.name || 'User',
               email: user?.email || '',
               contact: contact,
             },
@@ -344,6 +357,7 @@ export default function CheckoutPage() {
           cartId,
           address: addressString,
           contact,
+          name,
           paymentMethod: 'COD',
         };
 
@@ -569,6 +583,18 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               )}
+
+              <div>
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
 
               <div>
                 <Label htmlFor="contact">Contact Number</Label>

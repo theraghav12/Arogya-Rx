@@ -23,6 +23,7 @@ import {
   Home,
   Briefcase,
   User,
+  FileText,
 } from "lucide-react"
 import { format } from "date-fns"
 import { profileApi, type Address } from "@/lib/api/profile"
@@ -38,6 +39,8 @@ export default function ProfilePage() {
   const [profile, setProfile] = React.useState<any>(null)
   const [addresses, setAddresses] = React.useState<Address[]>([])
   const [showAddressForm, setShowAddressForm] = React.useState(false)
+  const [prescriptions, setPrescriptions] = React.useState<any[]>([])
+  const [loadingPrescriptions, setLoadingPrescriptions] = React.useState(false)
   
   // Image cropper states
   const [imageToCrop, setImageToCrop] = React.useState<string | null>(null)
@@ -83,6 +86,7 @@ export default function ProfilePage() {
   React.useEffect(() => {
     loadProfile()
     loadAddresses()
+    loadPrescriptions()
   }, [])
 
   const loadProfile = async () => {
@@ -149,6 +153,68 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("Failed to load addresses:", error)
+    }
+  }
+
+  const loadPrescriptions = async () => {
+    setLoadingPrescriptions(true)
+    try {
+      // Import prescription API
+      const { getMyPrescriptions } = await import("@/lib/api/prescriptions")
+      const prescriptionsData = await getMyPrescriptions()
+      
+      setPrescriptions(prescriptionsData.data || [])
+    } catch (error) {
+      console.error("Failed to load prescriptions:", error)
+      setPrescriptions([])
+    } finally {
+      setLoadingPrescriptions(false)
+    }
+  }
+
+  const handlePrescriptionUpload = async (file: File) => {
+    try {
+      const { uploadPrescription } = await import("@/lib/api/prescriptions")
+      await uploadPrescription(file)
+      
+      toast({
+        title: "Success",
+        description: "Prescription uploaded successfully",
+      })
+      
+      // Reload prescriptions
+      loadPrescriptions()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload prescription",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeletePrescription = async (prescriptionId: string) => {
+    if (!confirm("Are you sure you want to delete this prescription?")) {
+      return
+    }
+
+    try {
+      const { deletePrescription } = await import("@/lib/api/prescriptions")
+      await deletePrescription(prescriptionId)
+      
+      toast({
+        title: "Success",
+        description: "Prescription deleted successfully",
+      })
+      
+      // Reload prescriptions
+      loadPrescriptions()
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete prescription",
+        variant: "destructive",
+      })
     }
   }
 
@@ -522,9 +588,10 @@ export default function ProfilePage() {
 
             <div className="lg:col-span-3">
               <Tabs defaultValue="personal" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="personal">Personal Info</TabsTrigger>
                   <TabsTrigger value="addresses">Addresses</TabsTrigger>
+                  <TabsTrigger value="prescriptions">My Prescriptions</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="personal" className="mt-6">
@@ -910,6 +977,178 @@ export default function ProfilePage() {
                           </CardContent>
                         </Card>
                       ))
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="prescriptions" className="mt-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold">My Prescriptions</h3>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary">{prescriptions.length} Prescription{prescriptions.length !== 1 ? 's' : ''}</Badge>
+                        <div>
+                          <input
+                            type="file"
+                            id="prescription-upload"
+                            accept="image/jpeg,image/jpg,image/png,application/pdf"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) {
+                                // Validate file type
+                                const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf']
+                                if (!validTypes.includes(file.type)) {
+                                  toast({
+                                    title: "Invalid File Type",
+                                    description: "Only JPG, PNG, and PDF files are allowed",
+                                    variant: "destructive",
+                                  })
+                                  return
+                                }
+                                
+                                // Validate file size (5MB)
+                                const maxSize = 5 * 1024 * 1024
+                                if (file.size > maxSize) {
+                                  toast({
+                                    title: "File Too Large",
+                                    description: "File size should not exceed 5MB",
+                                    variant: "destructive",
+                                  })
+                                  return
+                                }
+                                
+                                handlePrescriptionUpload(file)
+                                e.target.value = '' // Reset input
+                              }
+                            }}
+                            className="hidden"
+                          />
+                          <label htmlFor="prescription-upload">
+                            <Button asChild>
+                              <span className="cursor-pointer">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Upload Prescription
+                              </span>
+                            </Button>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Alert>
+                      <FileText className="h-4 w-4" />
+                      <AlertDescription>
+                        Upload your prescriptions here to use them later when ordering prescription medicines. 
+                        Accepted formats: JPG, PNG, PDF (Max 5MB)
+                      </AlertDescription>
+                    </Alert>
+
+                    {loadingPrescriptions ? (
+                      <Card>
+                        <CardContent className="p-12 text-center">
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                          <p className="text-muted-foreground">Loading prescriptions...</p>
+                        </CardContent>
+                      </Card>
+                    ) : prescriptions.length === 0 ? (
+                      <Card>
+                        <CardContent className="p-12 text-center">
+                          <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                          <h3 className="mb-2 text-lg font-semibold">No Prescriptions Yet</h3>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Upload your prescriptions to keep them handy for future orders
+                          </p>
+                          <label htmlFor="prescription-upload">
+                            <Button asChild variant="outline">
+                              <span className="cursor-pointer">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Upload Your First Prescription
+                              </span>
+                            </Button>
+                          </label>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {prescriptions.map((prescription) => (
+                          <Card key={prescription._id} className="overflow-hidden">
+                            <div className="relative aspect-[3/4] bg-muted">
+                              {prescription.imageUrl.endsWith('.pdf') ? (
+                                <div className="h-full flex flex-col items-center justify-center p-4">
+                                  <FileText className="h-16 w-16 text-muted-foreground mb-2" />
+                                  <p className="text-sm text-center text-muted-foreground">PDF Document</p>
+                                </div>
+                              ) : (
+                                <img
+                                  src={prescription.imageUrl}
+                                  alt="Prescription"
+                                  className="h-full w-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={() => window.open(prescription.imageUrl, '_blank')}
+                                />
+                              )}
+                            </div>
+                            <CardContent className="p-4">
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <Badge 
+                                    variant={
+                                      prescription.status === 'approved' 
+                                        ? 'default' 
+                                        : prescription.status === 'rejected'
+                                        ? 'destructive'
+                                        : 'secondary'
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {prescription.status === 'pending' && '📋 Pending'}
+                                    {prescription.status === 'processing' && '🔍 Processing'}
+                                    {prescription.status === 'approved' && '✅ Approved'}
+                                    {prescription.status === 'rejected' && '❌ Rejected'}
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Uploaded: {new Date(prescription.createdAt).toLocaleDateString('en-IN', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}
+                                </p>
+                                {prescription.dateIssued && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Issued: {new Date(prescription.dateIssued).toLocaleDateString('en-IN', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })}
+                                  </p>
+                                )}
+                                {prescription.processedBy && (
+                                  <p className="text-xs text-muted-foreground">
+                                    Processed by: {prescription.processedBy.name}
+                                  </p>
+                                )}
+                                <div className="flex gap-2 pt-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1"
+                                    onClick={() => window.open(prescription.imageUrl, '_blank')}
+                                  >
+                                    View
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeletePrescription(prescription._id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </TabsContent>

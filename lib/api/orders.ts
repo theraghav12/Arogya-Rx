@@ -106,18 +106,7 @@ export interface PlaceOrderRequest {
 export interface PlaceOrderResponse {
   success: boolean;
   message: string;
-  order: Order;
-  prescriptionStatus: {
-    hasPrescriptionRequired: boolean;
-    prescriptionVerified: boolean;
-    prescriptionVerificationStatus: string;
-    prescriptionRequiredMedicines: any[];
-    prescriptionNotRequiredMedicines: any[];
-    prescriptionRequiredCount: number;
-    prescriptionNotRequiredCount: number;
-    message: string;
-    statusMessage: string;
-  };
+  orderId: string;
 }
 
 export interface OrdersResponse {
@@ -242,7 +231,7 @@ export interface LabTestOrder {
 
 /**
  * Place order from cart
- * Endpoint: POST /api/orders/place-order-using-cart
+ * Endpoint: POST /api/orders/place-from-cart
  */
 export async function placeOrder(data: PlaceOrderRequest): Promise<PlaceOrderResponse> {
   const token = getAuthToken();
@@ -251,7 +240,7 @@ export async function placeOrder(data: PlaceOrderRequest): Promise<PlaceOrderRes
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(`${API_BASE_URL}/orders/place-order-using-cart`, {
+  const response = await fetch(`${API_BASE_URL}/orders/place-from-cart`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -340,21 +329,28 @@ export async function getOrdersWithFilters(filters: {
   }
 
   const queryParams = new URLSearchParams();
+  
+  // Only add parameters that have actual values (not empty strings)
   Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== null) {
+    if (value !== undefined && value !== null && value !== '') {
       queryParams.append(key, value.toString());
     }
   });
 
-  const response = await fetch(`${API_BASE_URL}/orders/filter?${queryParams}`, {
+  const url = `${API_BASE_URL}/orders/filter?${queryParams}`;
+  console.log('Fetching orders from:', url);
+
+  const response = await fetch(url, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
   });
 
   const result = await response.json();
+  console.log('API Response:', result);
 
   if (!response.ok) {
+    console.error('API Error:', result);
     throw new Error(result.message || 'Failed to fetch orders');
   }
 
@@ -388,8 +384,8 @@ export async function cancelOrder(orderId: string): Promise<{ message: string; o
 }
 
 /**
- * Check prescription status for cart
- * Endpoint: GET /api/orders/prescription-status/:cartId
+ * Check prescription status for cart items
+ * Note: This checks cart items directly since the API endpoint may not exist
  */
 export async function checkPrescriptionStatus(cartId: string): Promise<any> {
   const token = getAuthToken();
@@ -398,19 +394,97 @@ export async function checkPrescriptionStatus(cartId: string): Promise<any> {
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(`${API_BASE_URL}/orders/prescription-status/${cartId}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+  try {
+    // Try the documented endpoint first
+    const response = await fetch(`${API_BASE_URL}/orders/prescription-status/${cartId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
 
-  const result = await response.json();
+    if (response.ok) {
+      return await response.json();
+    }
 
-  if (!response.ok) {
+    // If endpoint doesn't exist (404), check cart items directly
+    if (response.status === 404) {
+      const { getCart } = await import('./cart');
+      const cartData = await getCart();
+      
+      const prescriptionRequiredMedicines = cartData.cart.items.filter(
+        (item: any) => item.medicineId?.prescriptionRequired === true
+      );
+      
+      const prescriptionNotRequiredMedicines = cartData.cart.items.filter(
+        (item: any) => item.medicineId?.prescriptionRequired !== true
+      );
+      
+      return {
+        success: true,
+        message: 'Prescription status checked successfully',
+        data: {
+          cartId: cartId,
+          totalAmount: cartData.cart.totalAmount,
+          prescriptionStatus: {
+            hasPrescriptionRequired: prescriptionRequiredMedicines.length > 0,
+            prescriptionRequiredMedicines: prescriptionRequiredMedicines.map((item: any) => ({
+              medicineId: item.medicineId._id,
+              productName: item.medicineId.productName,
+              quantity: item.quantity,
+              price: item.medicineId.pricing.sellingPrice,
+              prescriptionRequired: true,
+              category: item.medicineId.category,
+              imageUrl: item.medicineId.images?.[0] || '',
+            })),
+            prescriptionNotRequiredMedicines: prescriptionNotRequiredMedicines.map((item: any) => ({
+              medicineId: item.medicineId._id,
+              productName: item.medicineId.productName,
+              quantity: item.quantity,
+              price: item.medicineId.pricing.sellingPrice,
+              prescriptionRequired: false,
+              category: item.medicineId.category,
+              imageUrl: item.medicineId.images?.[0] || '',
+            })),
+            prescriptionRequiredCount: prescriptionRequiredMedicines.length,
+            prescriptionNotRequiredCount: prescriptionNotRequiredMedicines.length,
+            totalItems: cartData.cart.items.length,
+          },
+          message: prescriptionRequiredMedicines.length > 0
+            ? `⚠️ This cart contains ${prescriptionRequiredMedicines.length} prescription medicine(s). You will need a valid prescription to complete the order.`
+            : 'No prescription required for items in cart',
+        },
+      };
+    }
+
+    const result = await response.json();
     throw new Error(result.message || result.error || 'Failed to check prescription status');
+  } catch (error: any) {
+    // If it's a network error or other error, try cart fallback
+    if (error.message === 'Failed to check prescription status') {
+      throw error;
+    }
+    
+    try {
+      const { getCart } = await import('./cart');
+      const cartData = await getCart();
+      
+      const prescriptionRequiredMedicines = cartData.cart.items.filter(
+        (item: any) => item.medicineId?.prescriptionRequired === true
+      );
+      
+      return {
+        success: true,
+        data: {
+          prescriptionStatus: {
+            hasPrescriptionRequired: prescriptionRequiredMedicines.length > 0,
+            prescriptionRequiredCount: prescriptionRequiredMedicines.length,
+          },
+        },
+      };
+    } catch (fallbackError) {
+      throw error;
+    }
   }
-
-  return result;
 }
 
 /**
@@ -442,6 +516,7 @@ export async function reorderOrder(orderId: string): Promise<any> {
 /**
  * Get order statistics
  * Endpoint: GET /api/orders/statistics
+ * Note: This endpoint may not exist on all backends
  */
 export async function getOrderStatistics(): Promise<{ success: boolean; message: string; statistics: OrderStatistics }> {
   const token = getAuthToken();
@@ -450,19 +525,24 @@ export async function getOrderStatistics(): Promise<{ success: boolean; message:
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(`${API_BASE_URL}/orders/statistics`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-    },
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/orders/statistics`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
 
-  const result = await response.json();
+    if (!response.ok) {
+      // If endpoint doesn't exist or returns error, throw to use fallback
+      throw new Error('Statistics endpoint not available');
+    }
 
-  if (!response.ok) {
-    throw new Error(result.message || 'Failed to fetch statistics');
+    const result = await response.json();
+    return result;
+  } catch (error) {
+    // Return empty statistics that will be calculated from orders
+    throw new Error('Statistics not available');
   }
-
-  return result;
 }
 
 /**
