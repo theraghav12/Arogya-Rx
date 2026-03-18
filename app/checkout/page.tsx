@@ -17,6 +17,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { PrescriptionSelector } from '@/components/prescription-selector';
+import type { Prescription } from '@/lib/api/prescriptions';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -42,6 +44,7 @@ export default function CheckoutPage() {
   const [prescriptionStatus, setPrescriptionStatus] = useState<any>(null);
   const [prescriptionFile, setPrescriptionFile] = useState<File | null>(null);
   const [prescriptionPreview, setPrescriptionPreview] = useState<string | null>(null);
+  const [selectedPrescriptions, setSelectedPrescriptions] = useState<Prescription[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -109,7 +112,7 @@ export default function CheckoutPage() {
       // Check prescription status
       if (cartData.cart?._id) {
         const prescStatus = await checkPrescriptionStatus(cartData.cart._id);
-        setPrescriptionStatus(prescStatus.data);
+        setPrescriptionStatus(prescStatus); // Now returns data directly
       }
     } catch (error: any) {
       toast({
@@ -120,55 +123,6 @@ export default function CheckoutPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handlePrescriptionUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file type
-      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-      if (!validTypes.includes(file.type)) {
-        toast({
-          title: 'Invalid File Type',
-          description: 'Please upload a JPG, PNG, or PDF file',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Validate file size (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast({
-          title: 'File Too Large',
-          description: 'Please upload a file smaller than 5MB',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      setPrescriptionFile(file);
-
-      // Create preview for images
-      if (file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setPrescriptionPreview(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        setPrescriptionPreview(null);
-      }
-
-      toast({
-        title: 'Prescription Uploaded',
-        description: 'Prescription uploaded successfully',
-      });
-    }
-  };
-
-  const handleRemovePrescription = () => {
-    setPrescriptionFile(null);
-    setPrescriptionPreview(null);
   };
 
   const handlePlaceOrder = async () => {
@@ -218,11 +172,13 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Check if prescription is required but not uploaded
-    if (prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && !prescriptionFile) {
+    // Check if prescription is required but not provided
+    if (prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && 
+        !prescriptionFile && 
+        selectedPrescriptions.length === 0) {
       toast({
         title: 'Prescription Required',
-        description: 'Please upload a valid prescription before placing order',
+        description: 'Please select an existing prescription or upload a new one before placing order',
         variant: 'destructive',
       });
       return;
@@ -363,9 +319,40 @@ export default function CheckoutPage() {
 
         const result = await placeOrder(orderData);
 
+        // If prescriptions were selected, upload them to the order
+        if (selectedPrescriptions.length > 0) {
+          try {
+            const { uploadPrescription: uploadOrderPrescription } = await import('@/lib/api/orders');
+            
+            // Convert prescription URLs to files and upload
+            const prescriptionFiles: File[] = [];
+            for (const prescription of selectedPrescriptions) {
+              try {
+                const response = await fetch(prescription.imageUrl);
+                const blob = await response.blob();
+                const filename = prescription.imageUrl.split('/').pop() || 'prescription.jpg';
+                const file = new File([blob], filename, { type: blob.type });
+                prescriptionFiles.push(file);
+              } catch (error) {
+                console.error('Error converting prescription to file:', error);
+              }
+            }
+            
+            if (prescriptionFiles.length > 0 && result.order?._id) {
+              await uploadOrderPrescription(result.order._id, prescriptionFiles);
+              console.log('Prescriptions uploaded to order successfully');
+            }
+          } catch (error) {
+            console.error('Error uploading prescriptions to order:', error);
+            // Don't fail the order placement for this
+          }
+        }
+
         toast({
           title: 'Success',
-          description: 'Order placed successfully!',
+          description: selectedPrescriptions.length > 0 
+            ? 'Order placed successfully with prescriptions!' 
+            : 'Order placed successfully!',
         });
 
         if (result.order?._id) {
@@ -404,7 +391,7 @@ export default function CheckoutPage() {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Prescription Warning & Upload */}
+          {/* Prescription Warning & Selection */}
           {prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && (
             <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950">
               <CardContent className="p-4">
@@ -418,70 +405,22 @@ export default function CheckoutPage() {
                       {prescriptionStatus.message}
                     </p>
                     <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
-                      Please upload a valid prescription to proceed with the order.
+                      Please select an existing prescription or upload a new one to proceed.
                     </p>
-
-                    {/* Prescription Upload Section */}
-                    <div className="mt-4">
-                      {!prescriptionFile ? (
-                        <div>
-                          <Label
-                            htmlFor="prescription-upload"
-                            className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-md transition-colors"
-                          >
-                            <Upload className="h-4 w-4" />
-                            Upload Prescription
-                          </Label>
-                          <Input
-                            id="prescription-upload"
-                            type="file"
-                            accept="image/jpeg,image/jpg,image/png,application/pdf"
-                            onChange={handlePrescriptionUpload}
-                            className="hidden"
-                          />
-                          <p className="text-xs text-amber-700 dark:text-amber-300 mt-2">
-                            Accepted formats: JPG, PNG, PDF (Max 5MB)
-                          </p>
-                        </div>
-                      ) : (
-                        <div className="bg-white dark:bg-amber-900 rounded-md p-3 border border-amber-300">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex items-start gap-2 flex-1">
-                              <FileText className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-amber-900 dark:text-amber-100 truncate">
-                                  {prescriptionFile.name}
-                                </p>
-                                <p className="text-xs text-amber-700 dark:text-amber-300">
-                                  {(prescriptionFile.size / 1024).toFixed(2)} KB
-                                </p>
-                              </div>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={handleRemovePrescription}
-                              className="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-100"
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          {prescriptionPreview && (
-                            <div className="mt-3">
-                              <img
-                                src={prescriptionPreview}
-                                alt="Prescription preview"
-                                className="max-h-40 rounded border border-amber-300"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Prescription Selector */}
+          {prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && (
+            <PrescriptionSelector
+              onPrescriptionSelect={setSelectedPrescriptions}
+              allowMultiple={true}
+              showUploadOption={true}
+              className="border-amber-200"
+            />
           )}
 
           {/* Delivery Address */}
@@ -719,15 +658,19 @@ export default function CheckoutPage() {
                 className="w-full"
                 size="lg"
                 onClick={handlePlaceOrder}
-                disabled={placing || (prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && !prescriptionFile)}
+                disabled={placing || (prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && 
+                         !prescriptionFile && 
+                         selectedPrescriptions.length === 0)}
               >
                 {placing ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Placing Order...
                   </>
-                ) : prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && !prescriptionFile ? (
-                  'Upload Prescription to Continue'
+                ) : prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && 
+                     !prescriptionFile && 
+                     selectedPrescriptions.length === 0 ? (
+                  'Select or Upload Prescription to Continue'
                 ) : (
                   `Place Order - ₹${totalPrice}`
                 )}

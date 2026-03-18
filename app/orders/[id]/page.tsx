@@ -38,6 +38,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { PrescriptionViewerModal } from '@/components/prescription-viewer-modal';
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -51,6 +52,15 @@ export default function OrderDetailPage() {
   const [prescriptionImages, setPrescriptionImages] = useState<string[]>([]);
   const [uploadingPrescription, setUploadingPrescription] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [viewPrescriptionModal, setViewPrescriptionModal] = useState<{
+    isOpen: boolean;
+    imageUrl: string;
+    title: string;
+  }>({
+    isOpen: false,
+    imageUrl: '',
+    title: ''
+  });
 
   useEffect(() => {
     if (params.id) {
@@ -164,6 +174,14 @@ export default function OrderDetailPage() {
         variant: 'destructive',
       });
     }
+  };
+
+  const handleViewPrescription = (imageUrl: string, title: string = "Prescription") => {
+    setViewPrescriptionModal({
+      isOpen: true,
+      imageUrl,
+      title
+    });
   };
 
   const handleCancelOrder = async () => {
@@ -632,7 +650,7 @@ export default function OrderDetailPage() {
                                 src={imageUrl}
                                 alt={`Prescription ${index + 1}`}
                                 className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => window.open(imageUrl, '_blank')}
+                                onClick={() => handleViewPrescription(imageUrl, `Prescription ${index + 1} - Order ${order.orderNumber}`)}
                               />
                             )}
                           </div>
@@ -641,7 +659,7 @@ export default function OrderDetailPage() {
                               variant="secondary"
                               size="sm"
                               className="h-7 w-7 p-0"
-                              onClick={() => window.open(imageUrl, '_blank')}
+                              onClick={() => handleViewPrescription(imageUrl, `Prescription ${index + 1} - Order ${order.orderNumber}`)}
                             >
                               <ImageIcon className="h-3 w-3" />
                             </Button>
@@ -809,6 +827,14 @@ export default function OrderDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Prescription View Modal */}
+      <PrescriptionViewerModal
+        isOpen={viewPrescriptionModal.isOpen}
+        onClose={() => setViewPrescriptionModal(prev => ({ ...prev, isOpen: false }))}
+        imageUrl={viewPrescriptionModal.imageUrl}
+        title={viewPrescriptionModal.title}
+      />
     </div>
   );
 }

@@ -402,8 +402,15 @@ export async function checkPrescriptionStatus(cartId: string): Promise<any> {
       },
     });
 
+    const result = await response.json();
+
     if (response.ok) {
-      return await response.json();
+      // NEW: Check success field and return data
+      if (result.success) {
+        return result.data;
+      } else {
+        throw new Error(result.message || 'Failed to check prescription status');
+      }
     }
 
     // If endpoint doesn't exist (404), check cart items directly
@@ -456,8 +463,8 @@ export async function checkPrescriptionStatus(cartId: string): Promise<any> {
       };
     }
 
-    const result = await response.json();
-    throw new Error(result.message || result.error || 'Failed to check prescription status');
+    const errorResult = await response.json();
+    throw new Error(errorResult.message || errorResult.error || 'Failed to check prescription status');
   } catch (error: any) {
     // If it's a network error or other error, try cart fallback
     if (error.message === 'Failed to check prescription status') {
@@ -634,11 +641,12 @@ export async function uploadPrescription(orderId: string, files: File[]): Promis
 
   const result = await response.json();
 
-  if (!response.ok) {
+  // NEW: Check success field
+  if (result.success) {
+    return result.data;
+  } else {
     throw new Error(result.message || 'Failed to upload prescription');
   }
-
-  return result;
 }
 
 /**
@@ -660,11 +668,12 @@ export async function getPrescriptionImages(orderId: string): Promise<any> {
 
   const result = await response.json();
 
-  if (!response.ok) {
+  // NEW: Check success field
+  if (result.success) {
+    return result;
+  } else {
     throw new Error(result.message || 'Failed to fetch prescription images');
   }
-
-  return result;
 }
 
 /**
@@ -691,11 +700,12 @@ export async function deletePrescriptionImage(orderId: string, imageUrl: string)
 
   const result = await response.json();
 
-  if (!response.ok) {
+  // NEW: Check success field
+  if (result.success) {
+    return result.data;
+  } else {
     throw new Error(result.message || 'Failed to delete prescription image');
   }
-
-  return result;
 }
 
 // ============================================================================

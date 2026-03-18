@@ -51,7 +51,7 @@ export interface PrescriptionResponse {
  * Upload a new prescription
  * Endpoint: POST /api/prescriptions
  */
-export async function uploadPrescription(file: File): Promise<PrescriptionResponse> {
+export async function uploadPrescription(file: File): Promise<Prescription> {
   const token = getAuthToken();
   
   if (!token) {
@@ -71,24 +71,26 @@ export async function uploadPrescription(file: File): Promise<PrescriptionRespon
 
   const result = await response.json();
 
-  if (!response.ok) {
+  // NEW: Check success field instead of response.ok
+  if (result.success) {
+    return result.data;
+  } else {
     throw new Error(result.message || 'Failed to upload prescription');
   }
-
-  return result;
 }
 
 /**
  * Get all my prescriptions
  * Endpoint: GET /api/prescriptions/my-prescriptions
  */
-export async function getMyPrescriptions(): Promise<PrescriptionsResponse> {
+export async function getMyPrescriptions(): Promise<Prescription[]> {
   const token = getAuthToken();
   
   if (!token) {
     throw new Error('Authentication required');
   }
 
+  // NEW: Updated endpoint
   const response = await fetch(`${API_BASE_URL}/prescriptions/my-prescriptions`, {
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -97,18 +99,19 @@ export async function getMyPrescriptions(): Promise<PrescriptionsResponse> {
 
   const result = await response.json();
 
-  if (!response.ok) {
+  // NEW: Check success field and return data array
+  if (result.success) {
+    return result.data || [];
+  } else {
     throw new Error(result.message || 'Failed to fetch prescriptions');
   }
-
-  return result;
 }
 
 /**
  * Get prescription by ID
  * Endpoint: GET /api/prescriptions/:id
  */
-export async function getPrescriptionById(prescriptionId: string): Promise<PrescriptionResponse> {
+export async function getPrescriptionById(prescriptionId: string): Promise<Prescription> {
   const token = getAuthToken();
   
   if (!token) {
@@ -123,25 +126,27 @@ export async function getPrescriptionById(prescriptionId: string): Promise<Presc
 
   const result = await response.json();
 
-  if (!response.ok) {
+  // NEW: Check success field
+  if (result.success) {
+    return result.data;
+  } else {
     throw new Error(result.message || 'Failed to fetch prescription');
   }
-
-  return result;
 }
 
 /**
  * Delete my prescription
- * Endpoint: DELETE /api/prescriptions/:id
+ * Endpoint: DELETE /api/prescriptions/me/:id
  */
-export async function deletePrescription(prescriptionId: string): Promise<{ success: boolean; message: string }> {
+export async function deletePrescription(prescriptionId: string): Promise<void> {
   const token = getAuthToken();
   
   if (!token) {
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(`${API_BASE_URL}/prescriptions/${prescriptionId}`, {
+  // NEW: Updated endpoint path
+  const response = await fetch(`${API_BASE_URL}/prescriptions/me/${prescriptionId}`, {
     method: 'DELETE',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -150,9 +155,8 @@ export async function deletePrescription(prescriptionId: string): Promise<{ succ
 
   const result = await response.json();
 
-  if (!response.ok) {
+  // NEW: Check success field
+  if (!result.success) {
     throw new Error(result.message || 'Failed to delete prescription');
   }
-
-  return result;
 }

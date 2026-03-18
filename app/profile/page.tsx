@@ -12,6 +12,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Progress } from "@/components/ui/progress"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Mail,
   Phone,
@@ -30,6 +37,7 @@ import { profileApi, type Address } from "@/lib/api/profile"
 import { useToast } from "@/hooks/use-toast"
 
 import { ImageCropper } from "@/components/image-cropper"
+import { PrescriptionViewerModal } from "@/components/prescription-viewer-modal"
 
 export default function ProfilePage() {
   const { toast } = useToast()
@@ -41,6 +49,17 @@ export default function ProfilePage() {
   const [showAddressForm, setShowAddressForm] = React.useState(false)
   const [prescriptions, setPrescriptions] = React.useState<any[]>([])
   const [loadingPrescriptions, setLoadingPrescriptions] = React.useState(false)
+  const [uploadingPrescription, setUploadingPrescription] = React.useState(false)
+  const [uploadProgress, setUploadProgress] = React.useState(0)
+  const [viewPrescriptionModal, setViewPrescriptionModal] = React.useState<{
+    isOpen: boolean;
+    imageUrl: string;
+    title: string;
+  }>({
+    isOpen: false,
+    imageUrl: '',
+    title: ''
+  })
   
   // Image cropper states
   const [imageToCrop, setImageToCrop] = React.useState<string | null>(null)
@@ -161,21 +180,44 @@ export default function ProfilePage() {
     try {
       // Import prescription API
       const { getMyPrescriptions } = await import("@/lib/api/prescriptions")
-      const prescriptionsData = await getMyPrescriptions()
+      const prescriptions = await getMyPrescriptions() // Now returns array directly
       
-      setPrescriptions(prescriptionsData.data || [])
+      setPrescriptions(prescriptions)
     } catch (error) {
       console.error("Failed to load prescriptions:", error)
       setPrescriptions([])
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to load prescriptions",
+        variant: "destructive",
+      })
     } finally {
       setLoadingPrescriptions(false)
     }
   }
 
   const handlePrescriptionUpload = async (file: File) => {
+    setUploadingPrescription(true)
+    setUploadProgress(0)
+    
     try {
+      // Simulate progress for better UX
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval)
+            return 90
+          }
+          return prev + 10
+        })
+      }, 200)
+
       const { uploadPrescription } = await import("@/lib/api/prescriptions")
       await uploadPrescription(file)
+      
+      // Complete progress
+      clearInterval(progressInterval)
+      setUploadProgress(100)
       
       toast({
         title: "Success",
@@ -183,13 +225,17 @@ export default function ProfilePage() {
       })
       
       // Reload prescriptions
-      loadPrescriptions()
+      await loadPrescriptions()
     } catch (error: any) {
+      setUploadProgress(0)
       toast({
-        title: "Error",
-        description: error.message || "Failed to upload prescription",
+        title: "Upload Failed",
+        description: error.message || "Prescription not uploaded. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setUploadingPrescription(false)
+      setTimeout(() => setUploadProgress(0), 1000)
     }
   }
 
@@ -216,6 +262,14 @@ export default function ProfilePage() {
         variant: "destructive",
       })
     }
+  }
+
+  const handleViewPrescription = (imageUrl: string, title: string = "Prescription") => {
+    setViewPrescriptionModal({
+      isOpen: true,
+      imageUrl,
+      title
+    })
   }
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -1024,16 +1078,27 @@ export default function ProfilePage() {
                             className="hidden"
                           />
                           <label htmlFor="prescription-upload">
-                            <Button asChild>
+                            <Button asChild disabled={uploadingPrescription}>
                               <span className="cursor-pointer">
                                 <Upload className="mr-2 h-4 w-4" />
-                                Upload Prescription
+                                {uploadingPrescription ? 'Uploading...' : 'Upload Prescription'}
                               </span>
                             </Button>
                           </label>
                         </div>
                       </div>
                     </div>
+
+                    {/* Upload Progress Bar */}
+                    {uploadingPrescription && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Uploading prescription...</span>
+                          <span className="font-medium">{uploadProgress}%</span>
+                        </div>
+                        <Progress value={uploadProgress} className="h-2" />
+                      </div>
+                    )}
 
                     <Alert>
                       <FileText className="h-4 w-4" />
@@ -1042,6 +1107,8 @@ export default function ProfilePage() {
                         Accepted formats: JPG, PNG, PDF (Max 5MB)
                       </AlertDescription>
                     </Alert>
+
+
 
                     {loadingPrescriptions ? (
                       <Card>
@@ -1059,10 +1126,10 @@ export default function ProfilePage() {
                             Upload your prescriptions to keep them handy for future orders
                           </p>
                           <label htmlFor="prescription-upload">
-                            <Button asChild variant="outline">
+                            <Button asChild variant="outline" disabled={uploadingPrescription}>
                               <span className="cursor-pointer">
                                 <Upload className="mr-2 h-4 w-4" />
-                                Upload Your First Prescription
+                                {uploadingPrescription ? 'Uploading...' : 'Upload Your First Prescription'}
                               </span>
                             </Button>
                           </label>
@@ -1083,7 +1150,10 @@ export default function ProfilePage() {
                                   src={prescription.imageUrl}
                                   alt="Prescription"
                                   className="h-full w-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                                  onClick={() => window.open(prescription.imageUrl, '_blank')}
+                                  onClick={() => handleViewPrescription(
+                                    prescription.imageUrl, 
+                                    `Prescription - ${new Date(prescription.createdAt).toLocaleDateString('en-IN')}`
+                                  )}
                                 />
                               )}
                             </div>
@@ -1132,7 +1202,10 @@ export default function ProfilePage() {
                                     variant="outline"
                                     size="sm"
                                     className="flex-1"
-                                    onClick={() => window.open(prescription.imageUrl, '_blank')}
+                                    onClick={() => handleViewPrescription(
+                                      prescription.imageUrl, 
+                                      `Prescription - ${new Date(prescription.createdAt).toLocaleDateString('en-IN')}`
+                                    )}
                                   >
                                     View
                                   </Button>
@@ -1156,6 +1229,14 @@ export default function ProfilePage() {
               </Tabs>
             </div>
           </div>
+
+          {/* Prescription View Modal */}
+          <PrescriptionViewerModal
+            isOpen={viewPrescriptionModal.isOpen}
+            onClose={() => setViewPrescriptionModal(prev => ({ ...prev, isOpen: false }))}
+            imageUrl={viewPrescriptionModal.imageUrl}
+            title={viewPrescriptionModal.title}
+          />
         </div>
-  )
-}
+    )
+  }
