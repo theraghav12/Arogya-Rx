@@ -23,8 +23,34 @@ export const updateUserProfile = (updates: any) => {
   }
 }
 
+export const isTokenExpired = (token: string): boolean => {
+  if (!token) return true
+  
+  try {
+    // Decode JWT token to check expiration
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    const currentTime = Math.floor(Date.now() / 1000)
+    
+    // Check if token has expired
+    return payload.exp && payload.exp < currentTime
+  } catch (error) {
+    // If we can't decode the token, consider it expired
+    return true
+  }
+}
+
 export const isAuthenticated = (): boolean => {
-  return !!getAuthToken()
+  const token = getAuthToken()
+  if (!token) return false
+  
+  // Check if token is expired
+  if (isTokenExpired(token)) {
+    // Clear expired token
+    clearAuth()
+    return false
+  }
+  
+  return true
 }
 
 export const clearAuth = () => {

@@ -282,6 +282,45 @@ export default function LoginPage() {
             <p className="text-xs text-muted-foreground">
               Enter your phone number to continue
             </p>
+            
+            {/* Sample Credentials */}
+            <div className="mt-4 p-3 bg-muted/50 rounded-lg border border-dashed border-muted-foreground/30">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Sample Credentials for Testing:</p>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Phone:</span>
+                  <button
+                    type="button"
+                    className="font-mono bg-background px-2 py-1 rounded border text-foreground hover:bg-accent transition-colors"
+                    onClick={() => {
+                      navigator.clipboard.writeText('9999999999')
+                      toast({
+                        title: "Copied!",
+                        description: "Phone number copied to clipboard",
+                      })
+                    }}
+                  >
+                    9999999999
+                  </button>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">OTP:</span>
+                  <button
+                    type="button"
+                    className="font-mono bg-background px-2 py-1 rounded border text-foreground hover:bg-accent transition-colors"
+                    onClick={() => {
+                      navigator.clipboard.writeText('999999')
+                      toast({
+                        title: "Copied!",
+                        description: "OTP copied to clipboard",
+                      })
+                    }}
+                  >
+                    999999
+                  </button>
+                </div>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="px-6 pb-6">
             {/* Only Phone Login - No Tabs */}

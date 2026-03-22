@@ -67,6 +67,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/login")
   }
 
+  // Handle token expiration
+  const handleTokenExpired = (event: CustomEvent) => {
+    const { message } = event.detail
+    
+    // Update auth state
+    setAuthState({ isAuthenticated: false, isChecking: false })
+    
+    // Show toast notification
+    toast({
+      title: "Session Expired",
+      description: message,
+      variant: "destructive",
+    })
+    
+    // Redirect to login after a short delay
+    setTimeout(() => {
+      router.push("/login")
+    }, 2000)
+  }
+
   useEffect(() => {
     const authenticated = isAuthenticated()
     const isAuthPage = pathname === "/login" || pathname === "/register"
@@ -91,6 +111,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }, 2000)
     }
   }, [pathname, router, toast])
+
+  // Listen for token expiration events
+  useEffect(() => {
+    const handleTokenExpiredEvent = (event: Event) => {
+      handleTokenExpired(event as CustomEvent)
+    }
+
+    window.addEventListener("token-expired", handleTokenExpiredEvent)
+    
+    return () => {
+      window.removeEventListener("token-expired", handleTokenExpiredEvent)
+    }
+  }, [router, toast])
 
   if (authState.isChecking) {
     return (

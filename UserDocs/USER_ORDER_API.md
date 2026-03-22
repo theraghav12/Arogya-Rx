@@ -242,7 +242,7 @@ await placeOrder({
 
 ### 2. Get All Orders
 
-**Endpoint**: `GET /api/orders`
+**Endpoint**: `GET /api/orders/my-orders`
 
 **Description**: Get all orders with filters and pagination.
 
@@ -265,11 +265,11 @@ Authorization: Bearer <token>
 
 **Example Requests**:
 ```
-GET /api/orders
-GET /api/orders?page=1&limit=10
-GET /api/orders?status=Delivered
-GET /api/orders?paymentStatus=Completed
-GET /api/orders?startDate=2025-01-01&endDate=2025-01-31
+GET /api/orders/my-orders
+GET /api/orders/my-orders?page=1&limit=10
+GET /api/orders/my-orders?status=Delivered
+GET /api/orders/my-orders?paymentStatus=Completed
+GET /api/orders/my-orders?startDate=2025-01-01&endDate=2025-01-31
 ```
 
 **Success Response** (200 OK):
@@ -329,7 +329,7 @@ const getOrders = async (page = 1, limit = 10, filters = {}) => {
     const params = new URLSearchParams({ page, limit, ...filters });
     
     const response = await fetch(
-      `http://localhost:5000/api/orders?${params}`,
+      `http://localhost:5000/api/orders/my-orders?${params}`,
       {
         headers: { 'Authorization': `Bearer ${token}` }
       }
@@ -443,7 +443,7 @@ const getOrderById = async (orderId) => {
 
 ### 4. Get Orders with Filters
 
-**Endpoint**: `GET /api/orders` (same as Get All Orders but with filters)
+**Endpoint**: `GET /api/orders/my-orders` (same as Get All Orders but with filters)
 
 See [Get All Orders](#2-get-all-orders) for complete details.
 
@@ -1292,7 +1292,7 @@ console.log('Lab test order created:', labTestOrder);
 
 ```javascript
 // Get all orders
-const orders = await fetch('http://localhost:5000/api/orders?page=1&limit=10', {
+const orders = await fetch('http://localhost:5000/api/orders/my-orders?page=1&limit=10', {
   headers: { 'Authorization': `Bearer ${token}` }
 });
 
@@ -1650,7 +1650,7 @@ const MyOrders = () => {
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem('userToken');
-      const response = await axios.get('http://localhost:5000/api/orders?page=1&limit=20', {
+      const response = await axios.get('http://localhost:5000/api/orders/my-orders?page=1&limit=20', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 

@@ -427,7 +427,7 @@ GET /api/orders/64f8a1b2c3d4e5f6g7h8i9j2
 
 ### **Endpoint:**
 ```
-GET /api/orders
+GET /api/orders/my-orders
 ```
 
 ### **Headers:**
@@ -455,16 +455,16 @@ sortOrder     - Sort order (default: "desc")
 ### **Example Requests:**
 ```
 # Get all pending orders
-GET /api/orders?status=Pending&page=1&limit=10
+GET /api/orders/my-orders?status=Pending&page=1&limit=10
 
 # Get delivered orders from last month
-GET /api/orders?status=Delivered&startDate=2024-01-01&endDate=2024-01-31
+GET /api/orders/my-orders?status=Delivered&startDate=2024-01-01&endDate=2024-01-31
 
 # Get orders sorted by amount (high to low)
-GET /api/orders?sortBy=totalAmount&sortOrder=desc
+GET /api/orders/my-orders?sortBy=totalAmount&sortOrder=desc
 
 # Get completed payment orders
-GET /api/orders?paymentStatus=Completed
+GET /api/orders/my-orders?paymentStatus=Completed
 ```
 
 ### **Response (Success - 200):**

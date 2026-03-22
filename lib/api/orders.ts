@@ -260,7 +260,7 @@ export async function placeOrder(data: PlaceOrderRequest): Promise<PlaceOrderRes
 
 /**
  * Get all orders with pagination
- * Endpoint: GET /api/orders
+ * Endpoint: GET /api/orders/my-orders
  */
 export async function getOrders(page = 1, limit = 10): Promise<OrdersResponse> {
   const token = getAuthToken();
@@ -269,7 +269,7 @@ export async function getOrders(page = 1, limit = 10): Promise<OrdersResponse> {
     throw new Error('Authentication required');
   }
 
-  const response = await fetch(`${API_BASE_URL}/orders?page=${page}&limit=${limit}`, {
+  const response = await fetch(`${API_BASE_URL}/orders/my-orders?page=${page}&limit=${limit}`, {
     headers: {
       'Authorization': `Bearer ${token}`,
     },
@@ -337,7 +337,7 @@ export async function getOrdersWithFilters(filters: {
     }
   });
 
-  const url = `${API_BASE_URL}/orders/filter?${queryParams}`;
+  const url = `${API_BASE_URL}/orders/my-orders/filter?${queryParams}`;
   console.log('Fetching orders from:', url);
 
   const response = await fetch(url, {
