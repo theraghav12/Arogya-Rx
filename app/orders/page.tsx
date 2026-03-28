@@ -614,17 +614,15 @@ export default function OrdersPage() {
         </div>
 
       {/* Return Request Modal */}
-      {selectedOrderIdForReturn && (
-        <ReturnRequestModal
-          isOpen={showReturnModal}
-          onClose={() => {
-            setShowReturnModal(false);
-            setSelectedOrderIdForReturn(null);
-          }}
-          orderId={selectedOrderIdForReturn}
-          onReturnCreated={handleReturnCreated}
-        />
-      )}
+      <ReturnRequestModal
+        isOpen={showReturnModal}
+        onClose={() => {
+          setShowReturnModal(false);
+          setSelectedOrderIdForReturn(null);
+        }}
+        orderId={selectedOrderIdForReturn || ''}
+        onReturnCreated={handleReturnCreated}
+      />
 
       {/* Return Details Modal */}
       <ReturnDetailsModal

@@ -1,55 +1,40 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useToast } from '@/hooks/use-toast'
-import { returnsApi, ReturnItem } from '@/lib/api/returns'
+import { returnsApi } from '@/lib/api/returns'
+import { getOrderById, type Order } from '@/lib/api/orders'
 import { Loader2, Package, AlertCircle } from 'lucide-react'
-
-interface OrderItem {
-  _id: string
-  medicineId?: {
-    _id: string
-    productName: string
-    itemCode: string
-  }
-  categoryProductId?: {
-    _id: string
-    productName: string
-    itemCode: string
-  }
-  productType: 'medicine' | 'categoryProduct'
-  quantity: number
-  batchNumber?: string
-  price: number
-}
 
 interface ReturnRequestModalProps {
   isOpen: boolean
   onClose: () => void
-  order: {
-    _id: string
-    orderNumber: string
-    items: OrderItem[]
-    orderedAt: string
-  }
+  orderId: string
   onReturnCreated: () => void
+}
+
+interface SelectedItem {
+  itemId: string
+  returnReason: string
+  customReason?: string
 }
 
 export function ReturnRequestModal({
   isOpen,
   onClose,
-  order,
+  orderId,
   onReturnCreated
 }: ReturnRequestModalProps) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [selectedItems, setSelectedItems] = useState<Record<string, ReturnItem>>({})
+  const [fetchingOrder, setFetchingOrder] = useState(false)
+  const [order, setOrder] = useState<Order | null>(null)
+  const [selectedItems, setSelectedItems] = useState<Record<string, SelectedItem>>({})
   const [customReasons, setCustomReasons] = useState<Record<string, string>>({})
 
   const returnReasons = [
@@ -59,47 +44,83 @@ export function ReturnRequestModal({
     { value: 'Other', label: 'Other' }
   ]
 
-  const handleItemSelect = (itemId: string, checked: boolean) => {
-    if (checked) {
-      const orderItem = order.items.find(item => item._id === itemId)
-      if (orderItem) {
-        // Auto-generate batch number if not available
-        const autoBatchNumber = orderItem.batchNumber || `BATCH-${Date.now().toString().slice(-6)}`
-        
-        setSelectedItems(prev => ({
-          ...prev,
-          [itemId]: {
-            productType: orderItem.productType,
-            medicineId: orderItem.medicineId?._id,
-            categoryProductId: orderItem.categoryProductId?._id,
-            batchNumber: autoBatchNumber,
-            returnQuantity: 1,
-            returnReason: 'Expired'
-          }
-        }))
+  // Fetch order details when modal opens
+  useEffect(() => {
+    if (isOpen && orderId) {
+      fetchOrderDetails()
+    }
+  }, [isOpen, orderId])
+
+  const fetchOrderDetails = async () => {
+    setFetchingOrder(true)
+    try {
+      const response = await getOrderById(orderId)
+      if (response.success) {
+        setOrder(response.order)
+      } else {
+        throw new Error(response.message || 'Failed to fetch order')
       }
-    } else {
-      setSelectedItems(prev => {
-        const newItems = { ...prev }
-        delete newItems[itemId]
-        return newItems
+    } catch (error: any) {
+      console.error('Error fetching order:', error)
+      toast({
+        title: "Error",
+        description: error.message || "Failed to fetch order details",
+        variant: "destructive"
       })
+    } finally {
+      setFetchingOrder(false)
     }
   }
-  const updateReturnItem = (itemId: string, field: keyof ReturnItem, value: any) => {
+
+  const handleItemToggle = (itemId: string) => {
+    setSelectedItems(prev => {
+      const newSelected = { ...prev }
+      
+      if (newSelected[itemId]) {
+        // Remove item
+        delete newSelected[itemId]
+      } else {
+        // Add item with default reason
+        newSelected[itemId] = {
+          itemId,
+          returnReason: 'Expired'
+        }
+      }
+      
+      return newSelected
+    })
+  }
+
+  const updateReturnReason = (itemId: string, reason: string) => {
     setSelectedItems(prev => ({
       ...prev,
       [itemId]: {
         ...prev[itemId],
-        [field]: value
+        returnReason: reason
       }
     }))
   }
 
+  const updateCustomReason = (itemId: string, customReason: string) => {
+    setCustomReasons(prev => ({
+      ...prev,
+      [itemId]: customReason
+    }))
+  }
+
   const handleSubmit = async () => {
-    const items = Object.values(selectedItems)
+    if (!order) {
+      toast({
+        title: "Error",
+        description: "Order data not available",
+        variant: "destructive"
+      })
+      return
+    }
+
+    const selectedIds = Object.keys(selectedItems)
     
-    if (items.length === 0) {
+    if (selectedIds.length === 0) {
       toast({
         title: "No items selected",
         description: "Please select at least one item to return",
@@ -108,23 +129,20 @@ export function ReturnRequestModal({
       return
     }
 
-    // Validate all items have required fields and valid quantities
-    const invalidItems = Object.entries(selectedItems).filter(([itemId, item]) => {
-      const orderItem = order.items.find(oi => oi._id === itemId);
-      const hasValidReason = item.returnReason && 
-        (item.returnReason !== 'Other' || (customReasons[itemId] && customReasons[itemId].trim().length > 0));
-      
-      return (
-        !hasValidReason || 
-        item.returnQuantity <= 0 ||
-        item.returnQuantity > (orderItem?.quantity || 0)
-      );
-    });
-
+    // Validate all selected items have reasons
+    const invalidItems = selectedIds.filter(itemId => {
+      const item = selectedItems[itemId]
+      if (!item.returnReason) return true
+      if (item.returnReason === 'Other' && (!customReasons[itemId] || customReasons[itemId].trim() === '')) {
+        return true
+      }
+      return false
+    })
+    
     if (invalidItems.length > 0) {
       toast({
-        title: "Invalid return data",
-        description: "Please check return quantities don't exceed ordered quantities and select valid return reasons",
+        title: "Missing information",
+        description: "Please select return reason for all items and provide custom reason when 'Other' is selected",
         variant: "destructive"
       })
       return
@@ -132,35 +150,37 @@ export function ReturnRequestModal({
 
     setLoading(true)
     try {
-      // Prepare items with proper API format
-      const apiItems = Object.entries(selectedItems).map(([itemId, item]) => {
-        const orderItem = order.items.find(oi => oi._id === itemId);
+      // Prepare API payload using order data
+      const apiItems = selectedIds.map(itemId => {
+        const orderItem = order.items.find(item => item._id === itemId)
+        if (!orderItem) throw new Error(`Order item not found: ${itemId}`)
+
+        const selectedItem = selectedItems[itemId]
         
-        return {
-          productType: item.productType,
-          medicineId: item.medicineId,
-          categoryProductId: item.categoryProductId,
-          batchNumber: item.batchNumber,
-          returnQuantity: item.returnQuantity,
-          returnReason: item.returnReason === 'Other' 
-            ? customReasons[itemId] || 'Other' 
-            : item.returnReason,
-          unitBilled: "Primary", // Default as per API
-          unitConversion: 1 // Default as per API
-        };
-      });
+        // Build API item based on order data
+        const apiItem: any = {
+          productType: orderItem.productType,
+          batchNumber: `BATCH-${Date.now().toString().slice(-6)}`, // Auto-generate
+          returnQuantity: orderItem.quantity, // Use full quantity from order
+          unitBilled: "Primary",
+          unitConversion: 1,
+          returnReason: selectedItem.returnReason
+        }
 
-      console.log('API Request:', {
-        originalOrderId: order._id,
-        items: apiItems
-      });
+        // Add product ID based on type from order data
+        if (orderItem.productType === 'medicine' && orderItem.medicine) {
+          apiItem.medicineId = orderItem.medicine._id
+        } else if (orderItem.productType === 'categoryProduct' && orderItem.categoryProduct) {
+          apiItem.categoryProductId = orderItem.categoryProduct._id
+        }
 
-      const result = await returnsApi.createReturn({
-        originalOrderId: order._id,
-        items: apiItems
+        return apiItem
       })
 
-      console.log('API Response:', result);
+      const result = await returnsApi.createReturn({
+        originalOrderId: orderId,
+        items: apiItems
+      })
 
       toast({
         title: "Return request created",
@@ -168,11 +188,9 @@ export function ReturnRequestModal({
       })
 
       onReturnCreated()
-      onClose()
-      setSelectedItems({})
-      setCustomReasons({})
+      handleClose()
     } catch (error: any) {
-      console.error('Return API Error:', error);
+      console.error('Return API Error:', error)
       toast({
         title: "Failed to create return",
         description: error.message || "Something went wrong",
@@ -185,17 +203,17 @@ export function ReturnRequestModal({
 
   const handleClose = () => {
     setSelectedItems({})
-    setCustomReasons({})
+    setOrder(null)
     onClose()
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Return Request - {order.orderNumber}
+            Return Request{order ? ` - ${order.orderNumber}` : ''}
           </DialogTitle>
         </DialogHeader>
 
@@ -206,121 +224,84 @@ export function ReturnRequestModal({
               <div>
                 <h4 className="font-medium text-amber-800 dark:text-amber-200">Return Policy</h4>
                 <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                  Returns are only accepted within 48 hours of order delivery. Please ensure items are in original condition.
+                  Returns are only accepted within 48 hours of order delivery.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Select Items to Return</h3>
-            
-            {order.items.map((item) => {
-              const itemId = item._id
-              const isSelected = itemId in selectedItems
-              const productName = item.medicineId?.productName || item.categoryProductId?.productName || 'Unknown Product'
+          {fetchingOrder ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin mr-2" />
+              <span>Loading order details...</span>
+            </div>
+          ) : order ? (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Select Items to Return</h3>
               
-              // Get original order item data for display
-              const orderQuantity = item.quantity
-              const orderPrice = item.price
+              {order.items
+                .filter(item => item.productType === 'medicine' || item.productType === 'categoryProduct')
+                .map((item, index) => {
+                  const itemId = item._id
+                  const isSelected = itemId in selectedItems
+                  const productName = item.medicine?.productName || item.categoryProduct?.productName || 'Unknown Product'
 
-              // Debug: Check if price and quantity are available
-              console.log('Item data:', { 
-                productName, 
-                quantity: orderQuantity, 
-                price: orderPrice,
-                fullItem: item 
-              })
-
-              return (
-                <div key={itemId} className="border rounded-lg p-4 space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(checked) => handleItemSelect(itemId, checked as boolean)}
-                      className="mt-1"
-                    />
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-medium">{productName}</h4>
-                          <div className="mt-1 space-y-1">
+                  return (
+                    <div key={`${itemId}-${index}`} className="border rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleItemToggle(itemId)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1">
+                          <div 
+                            className="cursor-pointer" 
+                            onClick={() => handleItemToggle(itemId)}
+                          >
+                            <h4 className="font-medium">{productName}</h4>
                             <p className="text-sm text-muted-foreground">
-                              Ordered Quantity: {orderQuantity || 'N/A'} | Price: ₹{orderPrice || '0'}
+                              Quantity: {item.quantity} | Price: ₹{item.price?.toFixed(2) || '0.00'}
                             </p>
                           </div>
+
+                          {isSelected && (
+                            <div className="mt-4">
+                              <Label>Return Reason *</Label>
+                              <Select
+                                value={selectedItems[itemId]?.returnReason || ''}
+                                onValueChange={(value) => updateReturnReason(itemId, value)}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select reason" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {returnReasons.map((reason) => (
+                                    <SelectItem key={reason.value} value={reason.value}>
+                                      {reason.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
                         </div>
                       </div>
-
-                      {isSelected && (
-                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <Label htmlFor={`quantity-${itemId}`}>Return Quantity *</Label>
-                            <Input
-                              id={`quantity-${itemId}`}
-                              type="number"
-                              min="1"
-                              max={orderQuantity}
-                              value={selectedItems[itemId]?.returnQuantity || 1}
-                              onChange={(e) => {
-                                const value = parseInt(e.target.value) || 1;
-                                // Ensure value doesn't exceed ordered quantity
-                                const clampedValue = Math.min(Math.max(1, value), orderQuantity);
-                                updateReturnItem(itemId, 'returnQuantity', clampedValue);
-                              }}
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Max: {orderQuantity}
-                            </p>
-                          </div>
-
-                          <div>
-                            <Label htmlFor={`reason-${itemId}`}>Return Reason *</Label>
-                            <Select
-                              value={selectedItems[itemId]?.returnReason || ''}
-                              onValueChange={(value) => updateReturnItem(itemId, 'returnReason', value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select reason" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {returnReasons.map((reason) => (
-                                  <SelectItem key={reason.value} value={reason.value}>
-                                    {reason.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            
-                            {/* Custom reason text box - Show when "Other" is selected */}
-                            {selectedItems[itemId]?.returnReason === 'Other' && (
-                              <div className="mt-2">
-                                <Input
-                                  placeholder="Please specify the reason..."
-                                  value={customReasons[itemId] || ''}
-                                  onChange={(e) => setCustomReasons(prev => ({
-                                    ...prev,
-                                    [itemId]: e.target.value
-                                  }))}
-                                  className="text-sm"
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
                     </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+                  )
+                })}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">Failed to load order details</p>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button variant="outline" onClick={handleClose} disabled={loading}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} disabled={loading}>
+            <Button onClick={handleSubmit} disabled={loading || fetchingOrder || !order}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Submit Return Request
             </Button>
