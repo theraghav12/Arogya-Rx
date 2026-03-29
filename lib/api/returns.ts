@@ -187,6 +187,14 @@ export const returnUtils = {
     return hoursDiff <= 48
   },
 
+  // Check if order can be returned (completed status + within time limit)
+  canReturnOrder(orderStatus: string, deliveryStatus: string, orderDate: string): boolean {
+    const isCompleted = orderStatus === 'Delivered' || deliveryStatus === 'Delivered'
+    const isWithinTimeLimit = this.isReturnEligible(orderDate)
+    
+    return isCompleted && isWithinTimeLimit
+  },
+
   // Get return status color
   getStatusColor(status: string): string {
     switch (status) {

@@ -562,11 +562,10 @@ export default function CheckoutPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="mt-1"
-                  readOnly={!useCustomAddress && selectedAddressId && addresses.find(addr => addr._id === selectedAddressId)?.isDefault}
                 />
-                {!useCustomAddress && selectedAddressId && addresses.find(addr => addr._id === selectedAddressId)?.isDefault && (
+                {!useCustomAddress && selectedAddressId && addresses.find(addr => addr._id === selectedAddressId)?.isDefault && name && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Name auto-filled from your profile (default address selected)
+                    Name auto-filled from your profile (you can edit it if needed)
                   </p>
                 )}
               </div>

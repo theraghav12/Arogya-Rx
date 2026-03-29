@@ -457,8 +457,8 @@ export default function OrdersPage() {
                       </div>
 
                       <div className="flex flex-col items-end gap-2">
-                        {/* Want to return? - Top right position */}
-                        {returnUtils.isReturnEligible(order.orderedAt) && (
+                        {/* Want to return? - Show only for completed/delivered orders within return window */}
+                        {returnUtils.canReturnOrder(order.status, order.deliveryStatus || '', order.orderedAt) && (
                           <button
                             onClick={() => handleReturnRequest(order)}
                             className="text-sm text-muted-foreground hover:text-orange-600 transition-colors underline decoration-dotted underline-offset-4 hover:decoration-solid"
