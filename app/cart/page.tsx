@@ -10,10 +10,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
+import { useCart, dispatchCartUpdate } from '@/lib/cart-context';
 
 export default function CartPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { updateCartCount } = useCart(); // Use cart context
   const [items, setItems] = useState<CartItem[]>([]);
   const [totalPrice, setTotalPrice] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
@@ -67,6 +69,9 @@ export default function CartPage() {
         description: 'Quantity updated successfully',
       });
       
+      // Update cart count in real-time
+      updateCartCount();
+      dispatchCartUpdate();
       fetchCart();
     } catch (error: any) {
       // If update fails, try fallback method
@@ -101,6 +106,9 @@ export default function CartPage() {
           description: 'Quantity updated successfully',
         });
         
+        // Update cart count in real-time
+        updateCartCount();
+        dispatchCartUpdate();
         fetchCart();
       } catch (fallbackError: any) {
         toast({
@@ -141,6 +149,9 @@ export default function CartPage() {
         description: 'Item removed from cart',
       });
       
+      // Update cart count in real-time
+      updateCartCount();
+      dispatchCartUpdate();
       fetchCart();
     } catch (error: any) {
       toast({
@@ -168,6 +179,9 @@ export default function CartPage() {
         description: 'Cart cleared successfully',
       });
       
+      // Update cart count in real-time
+      updateCartCount();
+      dispatchCartUpdate();
       fetchCart();
     } catch (error: any) {
       toast({

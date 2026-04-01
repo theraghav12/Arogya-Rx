@@ -939,46 +939,11 @@ export default function MedicineDetailPage() {
                         </>
                       )}
 
-                      {/* Stock Information */}
                       <Separator />
-                      <div>
-                        <h4 className="mb-2 font-medium">Stock Information</h4>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div className="rounded-lg border p-3">
-                            <p className="text-sm text-muted-foreground">Available Quantity</p>
-                            <p className="font-medium">{medicine.stock.totalQuantity} {medicine.stock.unit || "units"}</p>
-                          </div>
-                          <div className="rounded-lg border p-3">
-                            <p className="text-sm text-muted-foreground">Status</p>
-                            <Badge variant={medicine.stock.available ? "default" : "destructive"}>
-                              {medicine.stock.available ? "In Stock" : "Out of Stock"}
-                            </Badge>
-                          </div>
-                          {medicine.stock.minOrderQuantity && (
-                            <div className="rounded-lg border p-3">
-                              <p className="text-sm text-muted-foreground">Min Order Quantity</p>
-                              <p className="font-medium">{medicine.stock.minOrderQuantity}</p>
-                            </div>
-                          )}
-                          {medicine.stock.maxOrderQuantity && (
-                            <div className="rounded-lg border p-3">
-                              <p className="text-sm text-muted-foreground">Max Order Quantity</p>
-                              <p className="font-medium">{medicine.stock.maxOrderQuantity}</p>
-                            </div>
-                          )}
-                          {medicine.stock.reorderLevel !== undefined && (
-                            <div className="rounded-lg border p-3">
-                              <p className="text-sm text-muted-foreground">Reorder Level</p>
-                              <p className="font-medium">{medicine.stock.reorderLevel}</p>
-                            </div>
-                          )}
-                          {medicine.stock.nearExpiryDays !== undefined && (
-                            <div className="rounded-lg border p-3">
-                              <p className="text-sm text-muted-foreground">Near Expiry Days</p>
-                              <p className="font-medium">{medicine.stock.nearExpiryDays} days</p>
-                            </div>
-                          )}
-                        </div>
+                      <div className="rounded-lg bg-muted/30 p-4">
+                        <p className="text-sm text-muted-foreground">
+                          Keep medicines in a cool, dry place away from direct sunlight and out of reach of children.
+                        </p>
                       </div>
                     </div>
                   </CardContent>

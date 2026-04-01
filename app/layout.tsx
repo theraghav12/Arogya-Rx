@@ -12,6 +12,7 @@ import { AIChatbotFloat } from "@/components/ai-chatbot-float"
 import { AuthProvider } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { useTokenExpiry } from "@/hooks/use-token-expiry"
+import { CartProvider } from "@/lib/cart-context"
 import { useEffect } from "react"
 import "./globals.css"
 
@@ -245,7 +246,9 @@ export default function RootLayout({
       <body className={`${inter.className} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <AuthProvider>
-            <LayoutContent>{children}</LayoutContent>
+            <CartProvider>
+              <LayoutContent>{children}</LayoutContent>
+            </CartProvider>
           </AuthProvider>
           <Toaster />
         </ThemeProvider>

@@ -14,7 +14,7 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { isAuthenticated, clearAuth, getUser } from "@/lib/auth-utils"
-import { getCart } from "@/lib/api/cart"
+import { useCart } from "@/lib/cart-context"
 import { searchApi } from "@/lib/api/search"
 import {
   DropdownMenu,
@@ -30,7 +30,7 @@ export function Navbar() {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [authenticated, setAuthenticated] = React.useState(false)
   const [user, setUser] = React.useState<any>(null)
-  const [cartCount, setCartCount] = React.useState(0)
+  const { cartCount } = useCart() // Use cart context
   const [searchResults, setSearchResults] = React.useState<any>(null)
   const [searchLoading, setSearchLoading] = React.useState(false)
   const [showSearchResults, setShowSearchResults] = React.useState(false)
@@ -47,10 +47,6 @@ export function Navbar() {
       userData.name = `${userData.firstName || ''} ${userData.lastName || ''}`.trim()
     }
     setUser(userData)
-    
-    if (authStatus) {
-      fetchCartCount()
-    }
   }, [pathname])
 
   // Listen for storage changes to update user data
@@ -105,16 +101,6 @@ export function Navbar() {
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
-
-  const fetchCartCount = async () => {
-    try {
-      const data = await getCart()
-      setCartCount(data.totalItems || 0)
-    } catch (error) {
-      // Silently fail - cart might be empty
-      setCartCount(0)
-    }
-  }
 
   const handleLogout = () => {
     clearAuth()
@@ -261,12 +247,12 @@ export function Navbar() {
                     </div>
 
                     {/* Medicines */}
-                    {searchResults.medicines.count > 0 && (
+                    {searchResults.medicines?.count > 0 && (
                       <div className="mb-1">
                         <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase">
                           Medicines
                         </div>
-                        {searchResults.medicines.data.map((item: any) => (
+                        {searchResults.medicines.data?.map((item: any) => (
                           <button
                             key={item.id}
                             onClick={() => handleSearchResultClick("medicine", item.id)}
@@ -289,12 +275,12 @@ export function Navbar() {
                     )}
 
                     {/* Lab Tests */}
-                    {searchResults.labTests.count > 0 && (
+                    {searchResults.labTests?.count > 0 && (
                       <div className="mb-1">
                         <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase">
                           Lab Tests
                         </div>
-                        {searchResults.labTests.data.map((item: any) => (
+                        {searchResults.labTests.data?.map((item: any) => (
                           <button
                             key={item.id}
                             onClick={() => handleSearchResultClick("labTest", item.id)}
@@ -315,12 +301,12 @@ export function Navbar() {
                     )}
 
                     {/* Category Products */}
-                    {searchResults.categoryProducts.count > 0 && (
+                    {searchResults.categoryProducts?.count > 0 && (
                       <div className="mb-1">
                         <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase">
                           Products
                         </div>
-                        {searchResults.categoryProducts.data.map((item: any) => (
+                        {searchResults.categoryProducts.data?.map((item: any) => (
                           <button
                             key={item.id}
                             onClick={() => handleSearchResultClick("categoryProduct", item.id)}
@@ -343,12 +329,12 @@ export function Navbar() {
                     )}
 
                     {/* Doctors */}
-                    {searchResults.doctors.count > 0 && (
+                    {searchResults.doctors?.count > 0 && (
                       <div className="mb-1">
                         <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase">
                           Doctors
                         </div>
-                        {searchResults.doctors.data.map((item: any) => (
+                        {searchResults.doctors.data?.map((item: any) => (
                           <button
                             key={item.id}
                             onClick={() => handleSearchResultClick("doctor", item.id)}
