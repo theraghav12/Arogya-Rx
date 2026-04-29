@@ -203,7 +203,7 @@ export default function CheckoutPage() {
     }
 
     // Check if prescription is required but not provided
-    if (prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && 
+    if (prescriptionStatus?.data?.prescriptionStatus?.hasPrescriptionRequired && 
         !prescriptionFile && 
         selectedPrescriptions.length === 0) {
       toast({
@@ -292,7 +292,6 @@ export default function CheckoutPage() {
             cartId,
             address: addressString,
             contact,
-            name,
           });
 
           console.log('Payment order created successfully:', paymentData);
@@ -345,38 +344,45 @@ export default function CheckoutPage() {
           contact,
           name,
           paymentMethod: 'COD',
+          prescriptions: selectedPrescriptions
         };
 
         const result = await placeOrder(orderData);
-
-        // If prescriptions were selected, upload them to the order
-        if (selectedPrescriptions.length > 0) {
-          try {
-            const { uploadPrescription: uploadOrderPrescription } = await import('@/lib/api/orders');
+        // console.log("$$$$",selectedPrescriptions);
+        // // If prescriptions were selected, upload them to the order
+        // if (selectedPrescriptions.length > 0) {
+        //   try {
+        //     const { uploadPrescription: uploadOrderPrescription } = await import('@/lib/api/orders');
             
-            // Convert prescription URLs to files and upload
-            const prescriptionFiles: File[] = [];
-            for (const prescription of selectedPrescriptions) {
-              try {
-                const response = await fetch(prescription.imageUrl);
-                const blob = await response.blob();
-                const filename = prescription.imageUrl.split('/').pop() || 'prescription.jpg';
-                const file = new File([blob], filename, { type: blob.type });
-                prescriptionFiles.push(file);
-              } catch (error) {
-                console.error('Error converting prescription to file:', error);
-              }
-            }
+        //     // Convert prescription URLs to files and upload
+        //     const prescriptionFiles: File[] = [];
+        //     for (const prescription of selectedPrescriptions) {
+        //       try {
+        //         console.log(prescription);
+        //         const response = await fetch(prescription.imageUrl);
+        //         console.log("======", response);
+        //         const blob = await response.blob();
+        //         console.log("======", blob);
+        //         const filename = prescription.imageUrl.split('/').pop() || 'prescription.jpg';
+        //         console.log("======", filename);
+        //         const file = new File([blob], filename, { type: blob.type });
+        //         console.log("======", file);
+        //         prescriptionFiles.push(file);
+        //       } catch (error) {
+        //         console.error('Error converting prescription to file:', error);
+        //       }
+        //     }
+        //     console.log("-=-=-=-=-=-=-=-=-=-=-=-=-",prescriptionFiles)
             
-            if (prescriptionFiles.length > 0 && result.order?._id) {
-              await uploadOrderPrescription(result.order._id, prescriptionFiles);
-              console.log('Prescriptions uploaded to order successfully');
-            }
-          } catch (error) {
-            console.error('Error uploading prescriptions to order:', error);
-            // Don't fail the order placement for this
-          }
-        }
+        //     if (prescriptionFiles.length > 0 && result.order?._id) {
+        //       await uploadOrderPrescription(result.order._id, prescriptionFiles);
+        //       console.log('Prescriptions uploaded to order successfully');
+        //     }
+        //   } catch (error) {
+        //     console.error('Error uploading prescriptions to order:', error);
+        //     // Don't fail the order placement for this
+        //   }
+        // }
 
         toast({
           title: 'Success',
@@ -385,10 +391,10 @@ export default function CheckoutPage() {
             : 'Order placed successfully!',
         });
 
-        if (result.order?._id) {
-          router.push(`/orders/${result.order._id}`);
+        if (result.orderId) {
+          router.push(`/orders/${result.orderId}`);
         } else {
-          router.push('/orders');
+          router.push("/orders");
         }
       }
     } catch (error: any) {
@@ -422,7 +428,7 @@ export default function CheckoutPage() {
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Prescription Warning & Selection */}
-          {prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && (
+          {prescriptionStatus?.data?.prescriptionStatus?.hasPrescriptionRequired && (
             <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950">
               <CardContent className="p-4">
                 <div className="flex gap-3">
@@ -444,7 +450,7 @@ export default function CheckoutPage() {
           )}
 
           {/* Prescription Selector */}
-          {prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && (
+          {prescriptionStatus?.data?.prescriptionStatus?.hasPrescriptionRequired && (
             <PrescriptionSelector
               onPrescriptionSelect={setSelectedPrescriptions}
               allowMultiple={true}
@@ -693,7 +699,7 @@ export default function CheckoutPage() {
                 className="w-full"
                 size="lg"
                 onClick={handlePlaceOrder}
-                disabled={placing || (prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && 
+                disabled={placing || (prescriptionStatus?.data?.prescriptionStatus?.hasPrescriptionRequired && 
                          !prescriptionFile && 
                          selectedPrescriptions.length === 0)}
               >
@@ -702,7 +708,7 @@ export default function CheckoutPage() {
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Placing Order...
                   </>
-                ) : prescriptionStatus?.prescriptionStatus?.hasPrescriptionRequired && 
+                ) : prescriptionStatus?.data?.prescriptionStatus?.hasPrescriptionRequired && 
                      !prescriptionFile && 
                      selectedPrescriptions.length === 0 ? (
                   'Select or Upload Prescription to Continue'

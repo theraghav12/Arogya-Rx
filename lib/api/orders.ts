@@ -431,7 +431,7 @@ export async function checkPrescriptionStatus(cartId: string): Promise<any> {
         message: 'Prescription status checked successfully',
         data: {
           cartId: cartId,
-          totalAmount: cartData.cart.totalAmount,
+          totalAmount: cartData.cart.totalPrice,
           prescriptionStatus: {
             hasPrescriptionRequired: prescriptionRequiredMedicines.length > 0,
             prescriptionRequiredMedicines: prescriptionRequiredMedicines.map((item: any) => ({
@@ -640,7 +640,7 @@ export async function uploadPrescription(orderId: string, files: File[]): Promis
   });
 
   const result = await response.json();
-
+  
   // NEW: Check success field
   if (result.success) {
     return result.data;

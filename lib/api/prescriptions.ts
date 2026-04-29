@@ -31,6 +31,20 @@ export interface Prescription {
   updatedAt: string;
 }
 
+export interface PrescriptionAPIResponse {
+  success: boolean;
+  message: string;
+  data: {
+    _id: string,
+    patientId: string,
+    imageUrl: string,
+    status: string,
+    dateIssued: string,
+    createdAt: string,
+    updatedAt: string
+  }
+}
+
 export interface PrescriptionsResponse {
   success: boolean;
   count: number;

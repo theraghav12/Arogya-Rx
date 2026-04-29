@@ -28,6 +28,9 @@ export interface CartItem {
     };
     stockQuantity?: number; // Fallback if inventory is not nested
     prescriptionRequired: boolean;
+    packaging:{
+      packSize: string;
+    }
   };
   categoryProductId?: {
     _id: string;

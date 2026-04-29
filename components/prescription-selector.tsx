@@ -46,7 +46,7 @@ export function PrescriptionSelector({
     try {
       const data = await getMyPrescriptions();
       // Filter only approved or pending prescriptions
-      const validPrescriptions = data.data.filter(
+      const validPrescriptions = data.filter(
         (p) => p.status === 'approved' || p.status === 'pending'
       );
       setPrescriptions(validPrescriptions);
@@ -287,7 +287,7 @@ export function PrescriptionSelector({
 
                             <div className="flex gap-3 pr-8">
                               {/* Thumbnail */}
-                              <div className="w-16 h-16 rounded-md overflow-hidden bg-muted flex-shrink-0">
+                              <div className="w-16 h-16 rounded-md overflow-hidden bg-muted shrink-0">
                                 {prescription.imageUrl.endsWith('.pdf') ? (
                                   <div className="h-full flex items-center justify-center">
                                     <FileText className="h-8 w-8 text-muted-foreground" />
